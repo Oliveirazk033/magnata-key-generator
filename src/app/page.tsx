@@ -101,13 +101,14 @@ export default function Home() {
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [adminCategoryFilter, setAdminCategoryFilter] = useState('');
   const [newCategory, setNewCategory] = useState({ name: '', description: '' });
+  const [catListOpen, setCatListOpen] = useState(false);
 
   // Admin form states
   const [newProduct, setNewProduct] = useState({ name: '', description: '', duration: '', credits: '', categoryId: '' });
   const [newKeysText, setNewKeysText] = useState('');
   const [addingKeysTo, setAddingKeysTo] = useState('');
   const [copiedKey, setCopiedKey] = useState(false);
-  const [adminTab, setAdminTab] = useState('products');
+  const [adminTab, setAdminTab] = useState('dashboard');
   const [userTab, setUserTab] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -549,9 +550,10 @@ export default function Home() {
 
   const navItems = isAdmin
     ? [
-        { group: 'Principal', items: [{ icon: LayoutDashboard, label: 'Dashboard', tab: 'products' }] },
-        { group: 'Estoque', items: [{ icon: FolderOpen, label: 'Categorias', tab: 'categories' }, { icon: Key, label: 'Produtos & Keys', tab: 'products' }, { icon: Package, label: 'Estoque', tab: 'stock' }, { icon: History, label: 'Historico', tab: 'sales' }] },
-        { group: 'Sistema', items: [{ icon: User, label: 'Usuarios', tab: 'users' }, { icon: Play, label: 'Tutoriais', tab: 'tutorials' }, { icon: Link2, label: 'Links', tab: 'links' }] },
+        { group: 'Central', items: [{ icon: LayoutDashboard, label: 'Dashboard', tab: 'dashboard' }] },
+        { group: 'Gerador', items: [{ icon: Key, label: 'Gerar Keys', tab: 'products' }, { icon: Package, label: 'Estoque', tab: 'stock' }, { icon: History, label: 'Historico Keys', tab: 'sales' }] },
+        { group: 'Instalacao', items: [{ icon: Play, label: 'Tutoriais', tab: 'tutorials' }, { icon: Link2, label: 'Links', tab: 'links' }] },
+        { group: 'Sistema', items: [{ icon: User, label: 'Usuarios', tab: 'users' }] },
       ]
     : [];
 
@@ -969,10 +971,9 @@ export default function Home() {
           ) : (
             /* ====== ADMIN VIEW ====== */
             <motion.div key="admin" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
                 {[
                   { label: 'Produtos Ativos', value: activeProducts.length, color: 'text-white' },
-                  { label: 'Keys em Estoque', value: activeProducts.reduce((s, p) => s + p._count.keys, 0), color: 'text-emerald-400' },
                   { label: 'Vendas Totais', value: stats.totalSales, color: 'text-white' },
                   { label: 'Usuarios', value: users.length, color: 'text-blue-400' },
                 ].map((s, i) => (
@@ -983,71 +984,115 @@ export default function Home() {
               </div>
 
               <Tabs value={adminTab} onValueChange={setAdminTab}>
-                <TabsList className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-1 mb-4 w-full sm:w-auto flex-wrap">
-                  {[
-                    { value: 'categories', icon: FolderOpen, label: 'Categorias' },
-                    { value: 'products', icon: Key, label: 'Produtos' },
-                    { value: 'stock', icon: Package, label: 'Estoque' },
-                    { value: 'sales', icon: History, label: 'Historico' },
-                    { value: 'users', icon: User, label: 'Usuarios' },
-                    { value: 'tutorials', icon: Play, label: 'Tutoriais' },
-                    { value: 'links', icon: Link2, label: 'Links' },
-                  ].map((t) => (
-                    <TabsTrigger key={t.value} value={t.value} className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/40 rounded-lg text-xs tracking-wider gap-1.5">
-                      <t.icon className="w-3.5 h-3.5" />{t.label}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-
-                {/* Categories Tab */}
-                <TabsContent value="categories" className="space-y-3 mt-0">
-                  <div className="glass rounded-xl p-5">
-                    <h3 className="text-sm font-semibold tracking-wider text-white mb-4 flex items-center gap-2"><Plus className="w-4 h-4 text-white/40" />Nova Categoria</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <input placeholder="Nome da categoria" value={newCategory.name} onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })} className="glass-input rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-white/20" />
-                      <input placeholder="Descricao (opcional)" value={newCategory.description} onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })} className="glass-input rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-white/20" />
-                      <button onClick={handleCreateCategory} className="h-10 rounded-xl bg-white text-black text-xs font-medium tracking-wider hover:bg-white/90 transition-colors flex items-center justify-center gap-1.5"><Plus className="w-3.5 h-3.5" />CRIAR</button>
-                    </div>
+                <div className="space-y-2 mb-4">
+                  {/* Central */}
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[10px] uppercase tracking-widest text-white/20 px-1">Central</span>
+                    <div className="flex-1 h-px bg-white/[0.04]" />
                   </div>
-                  <div className="glass rounded-xl p-5">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-sm font-semibold tracking-wider text-white">Categorias Cadastradas</h3>
-                      <button onClick={() => fetchCategories(true)} className="text-white/30 hover:text-white/60 transition-colors"><RefreshCw className="w-3.5 h-3.5" /></button>
-                    </div>
-                    <div className="max-h-96 overflow-y-auto custom-scrollbar space-y-1">
-                      {categories.length === 0 ? (
-                        <div className="text-center py-8"><FolderOpen className="w-8 h-8 text-white/10 mx-auto mb-2" /><p className="text-sm text-white/20">Nenhuma categoria.</p></div>
-                      ) : categories.map((c) => (
-                        <div key={c.id} className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02] hover:bg-white/[0.04] transition-colors">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-sm font-medium text-white break-words">{c.name}</span>
-                              {!c.isActive && <Badge className="bg-red-500/10 text-red-400 border-red-500/20 text-[10px] shrink-0">Inativa</Badge>}
+                  <TabsList className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-1 w-full sm:w-auto">
+                    {[
+                      { value: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+                    ].map((t) => (
+                      <TabsTrigger key={t.value} value={t.value} className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/40 rounded-lg text-xs tracking-wider gap-1.5">
+                        <t.icon className="w-3.5 h-3.5" />{t.label}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                  {/* Gerador */}
+                  <div className="flex items-center gap-2 mb-1 mt-3">
+                    <span className="text-[10px] uppercase tracking-widest text-white/20 px-1">Gerador</span>
+                    <div className="flex-1 h-px bg-white/[0.04]" />
+                  </div>
+                  <TabsList className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-1 w-full sm:w-auto">
+                    {[
+                      { value: 'products', icon: Key, label: 'Gerar Keys' },
+                      { value: 'stock', icon: Package, label: 'Estoque' },
+                      { value: 'sales', icon: History, label: 'Historico Keys' },
+                    ].map((t) => (
+                      <TabsTrigger key={t.value} value={t.value} className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/40 rounded-lg text-xs tracking-wider gap-1.5">
+                        <t.icon className="w-3.5 h-3.5" />{t.label}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                  {/* Instalacao */}
+                  <div className="flex items-center gap-2 mb-1 mt-3">
+                    <span className="text-[10px] uppercase tracking-widest text-white/20 px-1">Instalacao</span>
+                    <div className="flex-1 h-px bg-white/[0.04]" />
+                  </div>
+                  <TabsList className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-1 w-full sm:w-auto">
+                    {[
+                      { value: 'tutorials', icon: Play, label: 'Tutoriais' },
+                      { value: 'links', icon: Link2, label: 'Links' },
+                    ].map((t) => (
+                      <TabsTrigger key={t.value} value={t.value} className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/40 rounded-lg text-xs tracking-wider gap-1.5">
+                        <t.icon className="w-3.5 h-3.5" />{t.label}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                </div>
+
+                {/* Dashboard Tab */}
+                <TabsContent value="dashboard" className="mt-0">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="glass rounded-xl p-5">
+                      <h3 className="text-sm font-semibold tracking-wider text-white mb-4 flex items-center gap-2"><BarChart3 className="w-4 h-4 text-white/40" />Vendas Recentes</h3>
+                      <div className="max-h-64 overflow-y-auto custom-scrollbar space-y-1">
+                        {transactions.length === 0 ? (<p className="text-sm text-white/20 text-center py-6">Nenhuma venda.</p>) : transactions.slice(0, 10).map((t) => (
+                          <div key={t.id} className="flex items-center justify-between p-2.5 rounded-lg bg-white/[0.02]">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2"><span className="text-sm text-white">{t.productName}</span><Badge className="bg-amber-500/10 text-amber-400 border-amber-500/20 text-[10px]">{t.credits} cr.</Badge></div>
+                              <p className="text-[10px] text-white/25 mt-0.5">{t.buyerInfo}</p>
                             </div>
-                            <div className="flex items-center gap-3 mt-1 text-[11px] text-white/40">
-                              <span>{c.productCount} produto{c.productCount !== 1 ? 's' : ''}</span>
-                              {c.description && <span className="text-white/20 break-words">{c.description}</span>}
-                            </div>
+                            <span className="text-[10px] text-white/20 shrink-0 ml-2">{new Date(t.createdAt).toLocaleString('pt-BR')}</span>
                           </div>
-                          <button onClick={() => handleDeleteCategory(c.id)} className="text-white/20 hover:text-red-400 transition-colors p-1"><Trash2 className="w-4 h-4" /></button>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
+                    </div>
+                    <div className="glass rounded-xl p-5">
+                      <h3 className="text-sm font-semibold tracking-wider text-white mb-4 flex items-center gap-2"><Package className="w-4 h-4 text-white/40" />Resumo por Categoria</h3>
+                      <div className="space-y-2">
+                        {categories.filter(c => c.isActive).length === 0 ? (
+                          <p className="text-sm text-white/20 text-center py-6">Nenhuma categoria.</p>
+                        ) : categories.filter(c => c.isActive).map((c) => (
+                          <div key={c.id} className="flex items-center justify-between p-2.5 rounded-lg bg-white/[0.02]">
+                            <span className="text-sm text-white">{c.name}</span>
+                            <span className="text-xs text-white/40">{c.productCount} produto{c.productCount !== 1 ? 's' : ''}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </TabsContent>
-
-                {/* Products Tab */}
+                {/* Products Tab (Gerar Keys) */}
                 <TabsContent value="products" className="space-y-3 mt-0">
                   {/* Quick Create Category */}
                   <div className="glass rounded-xl p-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <FolderOpen className="w-3.5 h-3.5 text-blue-400/60" />
-                      <h3 className="text-xs font-semibold tracking-wider text-white/60">Criar Categoria</h3>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <FolderOpen className="w-3.5 h-3.5 text-blue-400/60" />
+                        <h3 className="text-xs font-semibold tracking-wider text-white/60">Categorias</h3>
+                      </div>
+                      <button onClick={() => setCatListOpen(!catListOpen)} className="text-white/30 hover:text-white/60 transition-colors text-[11px]">{catListOpen ? 'Ocultar' : 'Ver todas'}</button>
                     </div>
                     <div className="flex gap-2">
                       <input placeholder="Ex: IOS, Android, Windows..." value={newCategory.name} onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })} className="glass-input flex-1 rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/20" />
                       <button onClick={handleCreateCategory} className="h-9 px-4 rounded-xl bg-blue-500/10 text-blue-400 text-xs font-medium tracking-wider hover:bg-blue-500/20 transition-colors flex items-center justify-center gap-1.5 border border-blue-500/20 shrink-0"><Plus className="w-3.5 h-3.5" />CATEGORIA</button>
                     </div>
+                    {catListOpen && (
+                      <div className="mt-3 max-h-48 overflow-y-auto custom-scrollbar space-y-1">
+                        {categories.length === 0 ? (<p className="text-xs text-white/20 text-center py-3">Nenhuma categoria criada.</p>) : categories.map((c) => (
+                          <div key={c.id} className="flex items-center justify-between p-2 rounded-lg bg-white/[0.02]">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-xs font-medium text-white">{c.name}</span>
+                              <span className="text-[10px] text-white/25">{c.productCount} prod.</span>
+                              {!c.isActive && <Badge className="bg-red-500/10 text-red-400 border-red-500/20 text-[9px]">Inativa</Badge>}
+                            </div>
+                            <button onClick={() => handleDeleteCategory(c.id)} className="text-white/20 hover:text-red-400 transition-colors p-0.5"><Trash2 className="w-3 h-3" /></button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Create Product */}
