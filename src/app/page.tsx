@@ -777,52 +777,19 @@ export default function Home() {
                 </div>
               ) : (
                 <Tabs value={userTab} onValueChange={setUserTab}>
-                  <div className="space-y-2 mb-4">
-                    {/* Central */}
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[10px] uppercase tracking-widest text-white/20 px-1">Central</span>
-                      <div className="flex-1 h-px bg-white/[0.04]" />
-                    </div>
-                    <TabsList className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-1 w-full sm:w-auto">
-                      {[
-                        { value: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-                      ].map((t) => (
-                        <TabsTrigger key={t.value} value={t.value} className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/40 rounded-lg text-xs tracking-wider gap-1.5">
-                          <t.icon className="w-3.5 h-3.5" />{t.label}
-                        </TabsTrigger>
-                      ))}
-                    </TabsList>
-                    {/* Gerador */}
-                    <div className="flex items-center gap-2 mb-1 mt-3">
-                      <span className="text-[10px] uppercase tracking-widest text-white/20 px-1">Gerador</span>
-                      <div className="flex-1 h-px bg-white/[0.04]" />
-                    </div>
-                    <TabsList className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-1 w-full sm:w-auto">
-                      {[
-                        { value: 'generate', icon: Key, label: 'Gerar Key' },
-                        { value: 'history', icon: History, label: 'Historico Keys' },
-                      ].map((t) => (
-                        <TabsTrigger key={t.value} value={t.value} className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/40 rounded-lg text-xs tracking-wider gap-1.5">
-                          <t.icon className="w-3.5 h-3.5" />{t.label}
-                        </TabsTrigger>
-                      ))}
-                    </TabsList>
-                    {/* Instalacao */}
-                    <div className="flex items-center gap-2 mb-1 mt-3">
-                      <span className="text-[10px] uppercase tracking-widest text-white/20 px-1">Instalacao</span>
-                      <div className="flex-1 h-px bg-white/[0.04]" />
-                    </div>
-                    <TabsList className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-1 w-full sm:w-auto">
-                      {[
-                        { value: 'tutorials', icon: Play, label: 'Tutoriais' },
-                        { value: 'links', icon: Link2, label: 'Links' },
-                      ].map((t) => (
-                        <TabsTrigger key={t.value} value={t.value} className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/40 rounded-lg text-xs tracking-wider gap-1.5">
-                          <t.icon className="w-3.5 h-3.5" />{t.label}
-                        </TabsTrigger>
-                      ))}
-                    </TabsList>
-                  </div>
+                  <TabsList className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-1 w-full sm:w-auto mb-4">
+                    {[
+                      { value: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+                      { value: 'generate', icon: Key, label: 'Gerar Key' },
+                      { value: 'history', icon: History, label: 'Historico Keys' },
+                      { value: 'tutorials', icon: Play, label: 'Tutoriais' },
+                      { value: 'links', icon: Link2, label: 'Links' },
+                    ].map((t) => (
+                      <TabsTrigger key={t.value} value={t.value} className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/40 rounded-lg text-xs tracking-wider gap-1.5">
+                        <t.icon className="w-3.5 h-3.5" />{t.label}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
 
                 <TabsContent value="dashboard" className="mt-0">
                 <div>
