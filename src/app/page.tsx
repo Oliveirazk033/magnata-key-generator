@@ -780,25 +780,25 @@ export default function Home() {
       </AnimatePresence>
 
       {/* Header */}
-      <header className="glass-nav h-14 sticky top-0 z-30 flex items-center justify-between px-4">
-        <div className="flex items-center gap-3">
+      <header className="glass-nav h-12 sm:h-14 sticky top-0 z-30 flex items-center justify-between px-3 sm:px-4">
+        <div className="flex items-center gap-2 sm:gap-3">
           <button onClick={() => setSidebarOpen(true)} className="text-white/50 hover:text-white/80 transition-colors">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
           </button>
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center border border-white/10"><Key className="w-3.5 h-3.5 text-white/60" /></div>
-            <span className="text-sm font-bold tracking-wider text-white/90">Gerador Magnata</span>
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-white/5 flex items-center justify-center border border-white/10"><Key className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white/60" /></div>
+            <span className="text-xs sm:text-sm font-bold tracking-wider text-white/90">Gerador Magnata</span>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
           {isAdmin ? (
             <>
               {/* Admin bell */}
               <div className="relative">
-                <button onClick={() => { setNotifOpen(!notifOpen); if (!notifOpen) fetchNotifications(); }} className="relative w-9 h-9 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center text-white/50 hover:text-white/80 hover:bg-white/[0.06] transition-colors">
+                <button onClick={() => { setNotifOpen(!notifOpen); if (!notifOpen) fetchNotifications(); }} className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center text-white/50 hover:text-white/80 hover:bg-white/[0.06] transition-colors">
                   <Bell className="w-4 h-4" />
                   {notifications.filter(n => !n.isRead).length > 0 && (
-                    <span className="absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full bg-blue-500 text-white text-[10px] font-bold flex items-center justify-center px-1">{Math.min(notifications.filter(n => !n.isRead).length, 9)}+</span>
+                    <span className="absolute -top-1 -right-1 min-w-[14px] h-3.5 rounded-full bg-blue-500 text-white text-[9px] font-bold flex items-center justify-center px-0.5">{Math.min(notifications.filter(n => !n.isRead).length, 9)}+</span>
                   )}
                 </button>
                 <AnimatePresence>
@@ -810,7 +810,7 @@ export default function Home() {
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -6, scale: 0.96 }}
                         transition={{ duration: 0.15 }}
-                        className="absolute right-0 top-11 z-50 glass-strong rounded-xl border border-white/[0.08] w-[calc(100vw-2rem)] sm:w-[320px] max-h-[400px] flex flex-col"
+                        className="absolute right-0 top-11 z-50 glass-strong rounded-xl border border-white/[0.08] w-[calc(100vw-1.5rem)] sm:w-[320px] max-h-[400px] flex flex-col"
                       >
                         <div className="flex items-center justify-between p-3 border-b border-white/[0.06]">
                           <span className="text-xs font-semibold tracking-wider text-white">Notificacoes</span>
@@ -840,15 +840,15 @@ export default function Home() {
                   )}
                 </AnimatePresence>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => router.push('/')} className="text-white/50 hover:text-white/80 hover:bg-white/5 text-xs tracking-wider"><Store className="w-4 h-4 mr-1.5" />LOJA</Button>
-              <Button variant="ghost" size="sm" onClick={() => { localStorage.removeItem('magnata_admin'); setIsAdmin(false); router.push('/'); }} className="text-white/50 hover:text-white/80 hover:bg-white/5 text-xs tracking-wider"><LogOut className="w-4 h-4 mr-1.5" />SAIR</Button>
+              <Button variant="ghost" size="sm" onClick={() => router.push('/')} className="text-white/50 hover:text-white/80 hover:bg-white/5 text-xs tracking-wider hidden sm:flex"><Store className="w-4 h-4 mr-1.5" />LOJA</Button>
+              <Button variant="ghost" size="sm" onClick={() => { localStorage.removeItem('magnata_admin'); setIsAdmin(false); router.push('/'); }} className="text-white/50 hover:text-white/80 hover:bg-white/5 text-xs tracking-wider"><LogOut className="w-4 h-4 sm:mr-1.5" />{''}</Button>
             </>
           ) : loggedUser ? (
-            <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="flex items-center gap-1">
               {/* User bell */}
               <div className="relative">
-                <button onClick={() => { setNotifOpen(!notifOpen); if (!notifOpen) fetchNotifications(); }} className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center text-white/50 hover:text-white/80 hover:bg-white/[0.06] transition-colors">
-                  <Bell className="w-4 h-4" />
+                <button onClick={() => { setNotifOpen(!notifOpen); if (!notifOpen) fetchNotifications(); }} className="relative w-8 h-8 rounded-lg bg-white/[0.03] border border-white/[0.06] flex items-center justify-center text-white/50 hover:text-white/80 hover:bg-white/[0.06] transition-colors">
+                  <Bell className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   {unreadCount > 0 && (
                     <span className="absolute -top-1 -right-1 min-w-[14px] h-3.5 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center px-0.5">{unreadCount > 9 ? '9+' : unreadCount}</span>
                   )}
@@ -862,7 +862,7 @@ export default function Home() {
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -6, scale: 0.96 }}
                         transition={{ duration: 0.15 }}
-                        className="absolute right-0 top-11 z-50 glass-strong rounded-xl border border-white/[0.08] w-[calc(100vw-2rem)] sm:w-[320px] max-h-[400px] flex flex-col"
+                        className="fixed left-2 right-2 top-12 sm:absolute sm:left-auto sm:right-0 sm:w-[320px] z-50 glass-strong rounded-xl border border-white/[0.08] max-h-[70vh] flex flex-col"
                       >
                         <div className="flex items-center justify-between p-3 border-b border-white/[0.06]">
                           <span className="text-xs font-semibold tracking-wider text-white">Notificacoes</span>
@@ -891,13 +891,11 @@ export default function Home() {
                   )}
                 </AnimatePresence>
               </div>
-              <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-white/5">
-                <Wallet className="w-3.5 h-3.5 text-amber-400" />
-                <span className="text-xs font-semibold text-amber-400">{loggedUser.credits}</span>
-                <span className="text-[10px] text-white/30 hidden sm:inline">créditos</span>
+              <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-white/5">
+                <Wallet className="w-3 h-3 text-amber-400" />
+                <span className="text-[11px] font-semibold text-amber-400">{loggedUser.credits}</span>
               </div>
-              <span className="text-xs text-white/60 hidden md:inline">{loggedUser.displayName}</span>
-              <button onClick={handleUserLogout} className="w-8 h-8 rounded-lg flex items-center justify-center text-white/40 hover:text-red-400 hover:bg-white/5 transition-colors"><LogOut className="w-4 h-4" /></button>
+              <button onClick={handleUserLogout} className="w-8 h-8 rounded-lg flex items-center justify-center text-white/30 hover:text-red-400 hover:bg-white/5 transition-colors"><LogOut className="w-3.5 h-3.5" /></button>
             </div>
           ) : (
             <Button variant="ghost" size="sm" onClick={() => setShowUserLogin(true)} className="text-white/50 hover:text-white/80 hover:bg-white/5 text-xs tracking-wider"><LogIn className="w-4 h-4 mr-1.5" />LOGIN</Button>
