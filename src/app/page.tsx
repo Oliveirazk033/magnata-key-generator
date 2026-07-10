@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -68,6 +69,10 @@ interface UserHistoryItem {
 
 /* ===== Main ===== */
 export default function Home() {
+  const pathname = usePathname();
+  const router = useRouter();
+  const isAdminRoute = pathname.startsWith('/admin');
+
   // Auth states
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
@@ -252,6 +257,75 @@ export default function Home() {
   }, [isAdmin, adminTab, categories.length, fetchCategories]);
   useEffect(() => { fetchUserHistory(); }, [fetchUserHistory]);
 
+  // --- Route & session management ---
+  // Sync isAdmin with route
+  useEffect(() => {
+    if (isAdminRoute && !isAdmin) {
+      // Try to restore admin session from localStorage
+      try {
+        const saved = localStorage.getItem('magnata_admin');
+        if (saved) {
+          const { password } = JSON.parse(saved);
+          if (password) {
+            setAdminPassword(password);
+            setIsAdmin(true);
+            setShowAdminLogin(false);
+            return;
+          }
+        }
+      } catch { /* ignore */ }
+      // No valid session, show login on admin route
+      if (!showAdminLogin) setShowAdminLogin(true);
+    } else if (!isAdminRoute && isAdmin) {
+      setIsAdmin(false);
+    }
+  }, [isAdminRoute]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Restore user session from localStorage (1-hour expiry)
+  useEffect(() => {
+    if (loggedUser) return; // already logged in
+    try {
+      const saved = localStorage.getItem('magnata_user');
+      if (saved) {
+        const session = JSON.parse(saved);
+        const ONE_HOUR = 3600000;
+        if (session.lastSeen && Date.now() - session.lastSeen < ONE_HOUR) {
+          // Update lastSeen
+          localStorage.setItem('magnata_user', JSON.stringify({ ...session, lastSeen: Date.now() }));
+          // Verify session is still valid
+          fetch('/api/auth/login', { headers: { 'x-user-id': session.id } })
+            .then(r => r.json())
+            .then(data => {
+              if (data.user) {
+                setLoggedUser(data.user);
+              } else {
+                localStorage.removeItem('magnata_user');
+              }
+            })
+            .catch(() => localStorage.removeItem('magnata_user'));
+        } else {
+          localStorage.removeItem('magnata_user');
+        }
+      }
+    } catch { /* ignore */ }
+  }, []); // only on mount
+
+  // Update user session lastSeen on activity
+  useEffect(() => {
+    if (!loggedUser) return;
+    const updateSeen = () => {
+      try {
+        const saved = localStorage.getItem('magnata_user');
+        if (saved) {
+          const session = JSON.parse(saved);
+          localStorage.setItem('magnata_user', JSON.stringify({ ...session, lastSeen: Date.now() }));
+        }
+      } catch { /* ignore */ }
+    };
+    const interval = setInterval(updateSeen, 60000); // update every minute
+    return () => clearInterval(interval);
+  }, [loggedUser]);
+
   // Refresh user credits after login
   const refreshUser = async () => {
     if (!loggedUser) return;
@@ -271,6 +345,7 @@ export default function Home() {
       if (data.success) {
         setIsAdmin(true);
         setShowAdminLogin(false);
+        localStorage.setItem('magnata_admin', JSON.stringify({ password: adminPassword }));
         toast.success('Login admin realizado');
         // Fetch admin data directly after login
         setTimeout(async () => {
@@ -310,6 +385,7 @@ export default function Home() {
         setShowUserLogin(false);
         setLoginUsername('');
         setLoginPassword('');
+        localStorage.setItem('magnata_user', JSON.stringify({ id: data.user.id, username: data.user.username, displayName: data.user.displayName, credits: data.user.credits, lastSeen: Date.now() }));
         toast.success(`Bem-vindo, ${data.user.displayName}!`);
       } else toast.error(data.error || 'Erro no login');
     } catch { toast.error('Erro ao fazer login'); }
@@ -320,6 +396,7 @@ export default function Home() {
     setLoggedUser(null);
     setDeliveredKey(null);
     setDeliveredKeys([]);
+    localStorage.removeItem('magnata_user');
     toast.success('Desconectado');
   };
 
@@ -612,14 +689,10 @@ export default function Home() {
               </div>
               <Separator className="bg-white/5 my-4" />
               {isAdmin ? (
-                <button onClick={() => { setIsAdmin(false); setSidebarOpen(false); }} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-white/50 hover:bg-white/5 hover:text-white/80 transition-colors">
+                <button onClick={() => { localStorage.removeItem('magnata_admin'); setIsAdmin(false); router.push('/'); setSidebarOpen(false); }} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-white/50 hover:bg-white/5 hover:text-white/80 transition-colors">
                   <Store className="w-4 h-4" />Ver Loja
                 </button>
-              ) : (
-                <button onClick={() => { setShowAdminLogin(true); setSidebarOpen(false); }} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-white/50 hover:bg-white/5 hover:text-white/80 transition-colors">
-                  <Lock className="w-4 h-4" />Admin
-                </button>
-              )}
+              ) : null}
             </motion.nav>
           </>
         )}
@@ -639,8 +712,8 @@ export default function Home() {
         <div className="flex items-center gap-2">
           {isAdmin ? (
             <>
-              <Button variant="ghost" size="sm" onClick={() => setIsAdmin(false)} className="text-white/50 hover:text-white/80 hover:bg-white/5 text-xs tracking-wider"><Store className="w-4 h-4 mr-1.5" />LOJA</Button>
-              <Button variant="ghost" size="sm" onClick={() => { setIsAdmin(false); }} className="text-white/50 hover:text-white/80 hover:bg-white/5 text-xs tracking-wider"><LogOut className="w-4 h-4 mr-1.5" />SAIR</Button>
+              <Button variant="ghost" size="sm" onClick={() => router.push('/')} className="text-white/50 hover:text-white/80 hover:bg-white/5 text-xs tracking-wider"><Store className="w-4 h-4 mr-1.5" />LOJA</Button>
+              <Button variant="ghost" size="sm" onClick={() => { localStorage.removeItem('magnata_admin'); setIsAdmin(false); router.push('/'); }} className="text-white/50 hover:text-white/80 hover:bg-white/5 text-xs tracking-wider"><LogOut className="w-4 h-4 mr-1.5" />SAIR</Button>
             </>
           ) : loggedUser ? (
             <div className="flex items-center gap-3">
@@ -653,10 +726,7 @@ export default function Home() {
               <Button variant="ghost" size="sm" onClick={handleUserLogout} className="text-white/50 hover:text-red-400 hover:bg-white/5 text-xs"><LogOut className="w-4 h-4" /></Button>
             </div>
           ) : (
-            <>
-              <Button variant="ghost" size="sm" onClick={() => setShowUserLogin(true)} className="text-white/50 hover:text-white/80 hover:bg-white/5 text-xs tracking-wider"><LogIn className="w-4 h-4 mr-1.5" />LOGIN</Button>
-              <Button variant="ghost" size="sm" onClick={() => setShowAdminLogin(true)} className="text-white/50 hover:text-white/80 hover:bg-white/5 text-xs tracking-wider"><Lock className="w-4 h-4 mr-1.5" />ADMIN</Button>
-            </>
+            <Button variant="ghost" size="sm" onClick={() => setShowUserLogin(true)} className="text-white/50 hover:text-white/80 hover:bg-white/5 text-xs tracking-wider"><LogIn className="w-4 h-4 mr-1.5" />LOGIN</Button>
           )}
         </div>
       </header>
