@@ -810,7 +810,7 @@ export default function Home() {
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -6, scale: 0.96 }}
                         transition={{ duration: 0.15 }}
-                        className="absolute right-0 top-12 z-50 glass-strong rounded-xl border border-white/[0.08] w-[320px] max-h-[400px] flex flex-col"
+                        className="absolute right-0 top-11 z-50 glass-strong rounded-xl border border-white/[0.08] w-[calc(100vw-2rem)] sm:w-[320px] max-h-[400px] flex flex-col"
                       >
                         <div className="flex items-center justify-between p-3 border-b border-white/[0.06]">
                           <span className="text-xs font-semibold tracking-wider text-white">Notificacoes</span>
@@ -844,13 +844,13 @@ export default function Home() {
               <Button variant="ghost" size="sm" onClick={() => { localStorage.removeItem('magnata_admin'); setIsAdmin(false); router.push('/'); }} className="text-white/50 hover:text-white/80 hover:bg-white/5 text-xs tracking-wider"><LogOut className="w-4 h-4 mr-1.5" />SAIR</Button>
             </>
           ) : loggedUser ? (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               {/* User bell */}
               <div className="relative">
-                <button onClick={() => { setNotifOpen(!notifOpen); if (!notifOpen) fetchNotifications(); }} className="relative w-9 h-9 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center text-white/50 hover:text-white/80 hover:bg-white/[0.06] transition-colors">
+                <button onClick={() => { setNotifOpen(!notifOpen); if (!notifOpen) fetchNotifications(); }} className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center text-white/50 hover:text-white/80 hover:bg-white/[0.06] transition-colors">
                   <Bell className="w-4 h-4" />
                   {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center px-1">{unreadCount > 9 ? '9+' : unreadCount}</span>
+                    <span className="absolute -top-1 -right-1 min-w-[14px] h-3.5 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center px-0.5">{unreadCount > 9 ? '9+' : unreadCount}</span>
                   )}
                 </button>
                 <AnimatePresence>
@@ -862,7 +862,7 @@ export default function Home() {
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -6, scale: 0.96 }}
                         transition={{ duration: 0.15 }}
-                        className="absolute right-0 top-12 z-50 glass-strong rounded-xl border border-white/[0.08] w-[320px] max-h-[400px] flex flex-col"
+                        className="absolute right-0 top-11 z-50 glass-strong rounded-xl border border-white/[0.08] w-[calc(100vw-2rem)] sm:w-[320px] max-h-[400px] flex flex-col"
                       >
                         <div className="flex items-center justify-between p-3 border-b border-white/[0.06]">
                           <span className="text-xs font-semibold tracking-wider text-white">Notificacoes</span>
@@ -891,13 +891,13 @@ export default function Home() {
                   )}
                 </AnimatePresence>
               </div>
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5">
+              <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-white/5">
                 <Wallet className="w-3.5 h-3.5 text-amber-400" />
                 <span className="text-xs font-semibold text-amber-400">{loggedUser.credits}</span>
-                <span className="text-[10px] text-white/30">créditos</span>
+                <span className="text-[10px] text-white/30 hidden sm:inline">créditos</span>
               </div>
-              <span className="text-xs text-white/60 hidden sm:inline">{loggedUser.displayName}</span>
-              <Button variant="ghost" size="sm" onClick={handleUserLogout} className="text-white/50 hover:text-red-400 hover:bg-white/5 text-xs"><LogOut className="w-4 h-4" /></Button>
+              <span className="text-xs text-white/60 hidden md:inline">{loggedUser.displayName}</span>
+              <button onClick={handleUserLogout} className="w-8 h-8 rounded-lg flex items-center justify-center text-white/40 hover:text-red-400 hover:bg-white/5 transition-colors"><LogOut className="w-4 h-4" /></button>
             </div>
           ) : (
             <Button variant="ghost" size="sm" onClick={() => setShowUserLogin(true)} className="text-white/50 hover:text-white/80 hover:bg-white/5 text-xs tracking-wider"><LogIn className="w-4 h-4 mr-1.5" />LOGIN</Button>
