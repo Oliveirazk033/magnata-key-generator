@@ -23,7 +23,7 @@ import Starfield from '@/components/Starfield';
 import {
   Key, Shield, Plus, Trash2, RefreshCw, Coins, ArrowRight,
   Lock, Unlock, History, Copy, Check, Store, BarChart3,
-  Package, BookOpen, X, LayoutDashboard, Hash, User, UserPlus, LogIn, LogOut, Wallet, Play, Link2, ExternalLink, FolderOpen, Tag, Pencil, MoreVertical,
+  Package, BookOpen, X, LayoutDashboard, Hash, User, UserPlus, LogIn, LogOut, Wallet, Play, Link2, ExternalLink, FolderOpen, Tag, Pencil, MoreVertical, Bell, BellOff, Megaphone,
 } from 'lucide-react';
 
 /* ===== Types ===== */
@@ -65,6 +65,11 @@ interface LinkItem {
 interface UserHistoryItem {
   id: string; keyCode: string; productName: string;
   credits: number; createdAt: string;
+}
+interface NotificationItem {
+  id: string; userId: string | null; userName?: string; username?: string;
+  title: string; message: string; type: string;
+  isRead: boolean; createdAt: string;
 }
 
 /* ===== Main ===== */
@@ -119,6 +124,9 @@ export default function Home() {
   const [userTab, setUserTab] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   // User management
   const [newUser, setNewUser] = useState({ username: '', password: '', displayName: '', credits: '10' });
@@ -250,15 +258,67 @@ export default function Home() {
     } catch { /* silent */ }
   }, [loggedUser?.id]);
 
+  // --- Notifications ---
+  const fetchNotifications = useCallback(async () => {
+    if (loggedUser) {
+      try {
+        const res = await fetch(`/api/notifications?userId=${loggedUser.id}`);
+        const data = await res.json();
+        if (data.notifications) { setNotifications(data.notifications); setUnreadCount(data.unread || 0); }
+      } catch { /* silent */ }
+    } else if (isAdmin) {
+      try {
+        const res = await fetch('/api/notifications?admin=true', { headers: { 'x-admin-key': adminPassword } });
+        const data = await res.json();
+        if (data.notifications) setNotifications(data.notifications);
+      } catch { /* silent */ }
+    }
+  }, [loggedUser?.id, isAdmin, adminPassword]);
+
+  const handleMarkNotifRead = async (id: string) => {
+    await fetch('/api/notifications', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+    setUnreadCount(prev => Math.max(0, prev - 1));
+  };
+
+  const handleMarkAllRead = async () => {
+    if (!loggedUser) return;
+    await fetch('/api/notifications', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ all: true, userId: loggedUser.id }) });
+    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+    setUnreadCount(0);
+  };
+
+  const [newAnnouncement, setNewAnnouncement] = useState({ title: '', message: '', userId: '' });
+  const handleSendAnnouncement = async () => {
+    if (!newAnnouncement.title || !newAnnouncement.message) { toast.error('Preencha titulo e mensagem'); return; }
+    try {
+      const res = await fetch('/api/notifications', { method: 'POST', headers: { 'Content-Type': 'application/json', ...getAdminHeaders() }, body: JSON.stringify({ ...newAnnouncement, userId: newAnnouncement.userId || null }) });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(data.sentTo ? `Enviado para ${data.sentTo} usuarios` : 'Notificacao enviada');
+        setNewAnnouncement({ title: '', message: '', userId: '' });
+        fetchNotifications();
+      } else toast.error(data.error || 'Erro');
+    } catch { toast.error('Erro'); }
+  };
+
+  const handleDeleteNotification = async (id: string) => {
+    try {
+      await fetch(`/api/notifications?id=${id}`, { method: 'DELETE', headers: getAdminHeaders() });
+      toast.success('Notificacao removida'); fetchNotifications();
+    } catch { toast.error('Erro'); }
+  };
+
   useEffect(() => { fetchProducts(); fetchUserTutorials(); fetchUserLinks(); }, [fetchProducts, fetchUserTutorials, fetchUserLinks]);
   useEffect(() => {
-    if (isAdmin) { fetchTransactions(); fetchKeys(); fetchUsers(); fetchTutorials(true); fetchLinks(true); fetchCategories(true); }
+    if (isAdmin) { fetchTransactions(); fetchKeys(); fetchUsers(); fetchTutorials(true); fetchLinks(true); fetchCategories(true); fetchNotifications(); }
   }, [isAdmin, fetchTransactions, fetchKeys, fetchUsers, fetchTutorials, fetchLinks, fetchCategories]);
   // Ensure categories are loaded when switching to products tab
   useEffect(() => {
     if (isAdmin && adminTab === 'products' && categories.length === 0) { fetchCategories(true); }
   }, [isAdmin, adminTab, categories.length, fetchCategories]);
   useEffect(() => { fetchUserHistory(); }, [fetchUserHistory]);
+  useEffect(() => { if (loggedUser) fetchNotifications(); }, [loggedUser, fetchNotifications]);
 
   // --- Route & session management ---
   // Sync isAdmin with route
@@ -649,7 +709,7 @@ export default function Home() {
         { group: 'Central', items: [{ icon: LayoutDashboard, label: 'Dashboard', tab: 'dashboard' }] },
         { group: 'Gerador', items: [{ icon: Key, label: 'Gerar Keys', tab: 'products' }, { icon: Package, label: 'Estoque', tab: 'stock' }, { icon: History, label: 'Historico Keys', tab: 'sales' }] },
         { group: 'Instalacao', items: [{ icon: Play, label: 'Tutoriais', tab: 'tutorials' }, { icon: Link2, label: 'Links', tab: 'links' }] },
-        { group: 'Sistema', items: [{ icon: User, label: 'Usuarios', tab: 'users' }] },
+        { group: 'Sistema', items: [{ icon: User, label: 'Usuarios', tab: 'users' }, { icon: Bell, label: 'Notificacoes', tab: 'notifications' }] },
       ]
     : [];
 
@@ -733,11 +793,104 @@ export default function Home() {
         <div className="flex items-center gap-2">
           {isAdmin ? (
             <>
+              {/* Admin bell */}
+              <div className="relative">
+                <button onClick={() => { setNotifOpen(!notifOpen); if (!notifOpen) fetchNotifications(); }} className="relative w-9 h-9 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center text-white/50 hover:text-white/80 hover:bg-white/[0.06] transition-colors">
+                  <Bell className="w-4 h-4" />
+                  {notifications.filter(n => !n.isRead).length > 0 && (
+                    <span className="absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full bg-blue-500 text-white text-[10px] font-bold flex items-center justify-center px-1">{Math.min(notifications.filter(n => !n.isRead).length, 9)}+</span>
+                  )}
+                </button>
+                <AnimatePresence>
+                  {notifOpen && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setNotifOpen(false)} />
+                      <motion.div
+                        initial={{ opacity: 0, y: -6, scale: 0.96 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -6, scale: 0.96 }}
+                        transition={{ duration: 0.15 }}
+                        className="absolute right-0 top-12 z-50 glass-strong rounded-xl border border-white/[0.08] w-[320px] max-h-[400px] flex flex-col"
+                      >
+                        <div className="flex items-center justify-between p-3 border-b border-white/[0.06]">
+                          <span className="text-xs font-semibold tracking-wider text-white">Notificacoes</span>
+                          <button onClick={() => { setAdminTab('notifications'); setNotifOpen(false); }} className="text-[10px] text-white/30 hover:text-white/60 transition-colors">Ver todas</button>
+                        </div>
+                        <div className="overflow-y-auto custom-scrollbar flex-1">
+                          {notifications.length === 0 ? (
+                            <div className="text-center py-8"><BellOff className="w-6 h-6 text-white/10 mx-auto mb-2" /><p className="text-xs text-white/20">Nenhuma notificacao</p></div>
+                          ) : notifications.slice(0, 10).map((n) => (
+                            <div key={n.id} className="p-3 border-b border-white/[0.03]">
+                              <div className="flex items-start gap-2">
+                                <div className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${n.type === 'credit' ? 'bg-amber-400' : 'bg-blue-400'}`} />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs font-medium text-white">{n.title}</p>
+                                  <p className="text-[11px] text-white/30 mt-0.5 break-words">{n.message}</p>
+                                  <div className="flex items-center gap-2 mt-1 text-[10px] text-white/15">
+                                    {n.userName && <span>{n.userName}</span>}
+                                    <span>{new Date(n.createdAt).toLocaleString('pt-BR')}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </motion.div>
+                    </>
+                  )}
+                </AnimatePresence>
+              </div>
               <Button variant="ghost" size="sm" onClick={() => router.push('/')} className="text-white/50 hover:text-white/80 hover:bg-white/5 text-xs tracking-wider"><Store className="w-4 h-4 mr-1.5" />LOJA</Button>
               <Button variant="ghost" size="sm" onClick={() => { localStorage.removeItem('magnata_admin'); setIsAdmin(false); router.push('/'); }} className="text-white/50 hover:text-white/80 hover:bg-white/5 text-xs tracking-wider"><LogOut className="w-4 h-4 mr-1.5" />SAIR</Button>
             </>
           ) : loggedUser ? (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              {/* User bell */}
+              <div className="relative">
+                <button onClick={() => { setNotifOpen(!notifOpen); if (!notifOpen) fetchNotifications(); }} className="relative w-9 h-9 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center text-white/50 hover:text-white/80 hover:bg-white/[0.06] transition-colors">
+                  <Bell className="w-4 h-4" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center px-1">{unreadCount > 9 ? '9+' : unreadCount}</span>
+                  )}
+                </button>
+                <AnimatePresence>
+                  {notifOpen && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setNotifOpen(false)} />
+                      <motion.div
+                        initial={{ opacity: 0, y: -6, scale: 0.96 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -6, scale: 0.96 }}
+                        transition={{ duration: 0.15 }}
+                        className="absolute right-0 top-12 z-50 glass-strong rounded-xl border border-white/[0.08] w-[320px] max-h-[400px] flex flex-col"
+                      >
+                        <div className="flex items-center justify-between p-3 border-b border-white/[0.06]">
+                          <span className="text-xs font-semibold tracking-wider text-white">Notificacoes</span>
+                          {unreadCount > 0 && (
+                            <button onClick={handleMarkAllRead} className="text-[10px] text-white/30 hover:text-white/60 transition-colors">Marcar todas como lidas</button>
+                          )}
+                        </div>
+                        <div className="overflow-y-auto custom-scrollbar flex-1">
+                          {notifications.length === 0 ? (
+                            <div className="text-center py-8"><BellOff className="w-6 h-6 text-white/10 mx-auto mb-2" /><p className="text-xs text-white/20">Nenhuma notificacao</p></div>
+                          ) : notifications.map((n) => (
+                            <div key={n.id} onClick={() => handleMarkNotifRead(n.id)} className={`p-3 border-b border-white/[0.03] cursor-pointer transition-colors hover:bg-white/[0.03] ${!n.isRead ? 'bg-white/[0.02]' : ''}`}>
+                              <div className="flex items-start gap-2">
+                                {!n.isRead && <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0" />}
+                                <div className="flex-1 min-w-0">
+                                  <p className={`text-xs font-medium ${!n.isRead ? 'text-white' : 'text-white/60'}`}>{n.title}</p>
+                                  <p className="text-[11px] text-white/30 mt-0.5 break-words">{n.message}</p>
+                                  <p className="text-[10px] text-white/15 mt-1">{new Date(n.createdAt).toLocaleString('pt-BR')}</p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </motion.div>
+                    </>
+                  )}
+                </AnimatePresence>
+              </div>
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5">
                 <Wallet className="w-3.5 h-3.5 text-amber-400" />
                 <span className="text-xs font-semibold text-amber-400">{loggedUser.credits}</span>
@@ -1161,6 +1314,7 @@ export default function Home() {
                   <TabsList className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-1 w-full sm:w-auto">
                     {[
                       { value: 'users', icon: User, label: 'Usuarios' },
+                      { value: 'notifications', icon: Bell, label: 'Notificacoes' },
                     ].map((t) => (
                       <TabsTrigger key={t.value} value={t.value} className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/40 rounded-lg text-xs tracking-wider gap-1.5">
                         <t.icon className="w-3.5 h-3.5" />{t.label}
@@ -1440,6 +1594,48 @@ export default function Home() {
                             {l.description && <p className="text-[11px] text-white/20 mt-0.5">{l.description}</p>}
                           </div>
                           <button onClick={() => handleDeleteLink(l.id)} className="text-white/20 hover:text-red-400 transition-colors p-1 shrink-0"><Trash2 className="w-3.5 h-3.5" /></button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </TabsContent>
+
+                {/* Notifications Tab */}
+                <TabsContent value="notifications" className="space-y-3 mt-0">
+                  <div className="glass rounded-xl p-5">
+                    <h3 className="text-sm font-semibold tracking-wider text-white mb-4 flex items-center gap-2"><Megaphone className="w-4 h-4 text-white/40" />Enviar Aviso</h3>
+                    <div className="space-y-3">
+                      <select value={newAnnouncement.userId} onChange={(e) => setNewAnnouncement({ ...newAnnouncement, userId: e.target.value })} className="glass-input w-full rounded-xl px-4 py-2.5 text-sm text-white/80">
+                        <option value="">Todos os usuarios</option>
+                        {users.filter(u => u.isActive).map((u) => (<option key={u.id} value={u.id}>{u.displayName} (@{u.username})</option>))}
+                      </select>
+                      <input placeholder="Titulo do aviso" value={newAnnouncement.title} onChange={(e) => setNewAnnouncement({ ...newAnnouncement, title: e.target.value })} className="glass-input w-full rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-white/20" />
+                      <Textarea value={newAnnouncement.message} onChange={(e) => setNewAnnouncement({ ...newAnnouncement, message: e.target.value })} rows={3} placeholder="Mensagem do aviso..." className="glass-input w-full rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-white/15 resize-none min-h-[80px]" />
+                      <button onClick={handleSendAnnouncement} className="h-10 px-6 rounded-xl bg-white text-black text-xs font-medium tracking-wider hover:bg-white/90 transition-colors flex items-center justify-center gap-1.5"><Megaphone className="w-3.5 h-3.5" />ENVIAR AVISO</button>
+                    </div>
+                  </div>
+                  <div className="glass rounded-xl p-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-sm font-semibold tracking-wider text-white">Notificacoes Enviadas</h3>
+                      <button onClick={fetchNotifications} className="text-white/30 hover:text-white/60 transition-colors"><RefreshCw className="w-3.5 h-3.5" /></button>
+                    </div>
+                    <div className="max-h-96 overflow-y-auto custom-scrollbar space-y-1">
+                      {notifications.length === 0 ? (
+                        <div className="text-center py-8"><BellOff className="w-8 h-8 text-white/10 mx-auto mb-2" /><p className="text-sm text-white/20">Nenhuma notificacao.</p></div>
+                      ) : notifications.map((n) => (
+                        <div key={n.id} className="flex items-start justify-between p-3 rounded-lg bg-white/[0.02] hover:bg-white/[0.04] transition-colors">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-sm font-medium text-white">{n.title}</span>
+                              <Badge className={`text-[10px] ${n.type === 'credit' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-blue-500/10 text-blue-400 border-blue-500/20'}`}>{n.type === 'credit' ? 'Creditos' : 'Aviso'}</Badge>
+                            </div>
+                            <p className="text-[11px] text-white/40 mt-1 break-words">{n.message}</p>
+                            <div className="flex items-center gap-3 mt-1.5 text-[10px] text-white/20">
+                              {n.userName && <span>{n.userName}</span>}
+                              <span>{new Date(n.createdAt).toLocaleString('pt-BR')}</span>
+                            </div>
+                          </div>
+                          <button onClick={() => handleDeleteNotification(n.id)} className="text-white/20 hover:text-red-400 transition-colors p-1 shrink-0"><Trash2 className="w-3.5 h-3.5" /></button>
                         </div>
                       ))}
                     </div>

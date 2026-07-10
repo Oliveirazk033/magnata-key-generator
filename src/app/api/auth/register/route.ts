@@ -92,8 +92,23 @@ export async function PATCH(request: NextRequest) {
     const args: unknown[] = [];
 
     if (credits !== undefined) {
+      // Get old credits before updating
+      const oldResult = await client.execute({ sql: `SELECT credits FROM "User" WHERE id = ?`, args: [userId] });
+      const oldCredits = oldResult.rows.length > 0 ? Number(oldResult.rows[0].credits) : 0;
+      const diff = Number(credits) - oldCredits;
+
       setClauses.push(`credits = ?`);
       args.push(Number(credits));
+
+      // Create credit notification after update
+      const nid = 'n_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+      const creditMsg = diff >= 0
+        ? `Voce recebeu ${diff} creditos adicionais. Saldo atual: ${credits}`
+        : `${Math.abs(diff)} creditos foram removidos. Saldo atual: ${credits}`;
+      await client.execute({
+        sql: `INSERT INTO "Notification" ("id", "userId", "title", "message", "type") VALUES (?, ?, ?, ?, ?)`,
+        args: [nid, userId, 'Atualizacao de creditos', creditMsg, 'credit'],
+      });
     }
     if (displayName !== undefined) {
       setClauses.push(`"displayName" = ?`);
