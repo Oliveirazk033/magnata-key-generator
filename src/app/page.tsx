@@ -541,11 +541,9 @@ export default function Home() {
     : userHistory;
 
   const userNavItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', tab: 'dashboard' },
-    { icon: Key, label: 'Gerar Key', tab: 'generate' },
-    { icon: History, label: 'Historico', tab: 'history' },
-    { icon: Play, label: 'Tutoriais', tab: 'tutorials' },
-    { icon: Link2, label: 'Links', tab: 'links' },
+    { group: 'Central', items: [{ icon: LayoutDashboard, label: 'Dashboard', tab: 'dashboard' }] },
+    { group: 'Gerador', items: [{ icon: Key, label: 'Gerar Key', tab: 'generate' }, { icon: History, label: 'Historico Keys', tab: 'history' }] },
+    { group: 'Instalacao', items: [{ icon: Play, label: 'Tutoriais', tab: 'tutorials' }, { icon: Link2, label: 'Links', tab: 'links' }] },
   ];
 
   const navItems = isAdmin
@@ -595,12 +593,19 @@ export default function Home() {
                     </div>
                   ))
                 ) : (
-                  <div className="space-y-1">
-                    {userNavItems.map((item) => (
-                      <button key={item.tab} onClick={() => { setUserTab(item.tab); setSidebarOpen(false); }}
-                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${userTab === item.tab ? 'bg-white/10 text-white' : 'text-white/50 hover:bg-white/5 hover:text-white/80'}`}>
-                        <item.icon className="w-4 h-4" />{item.label}
-                      </button>
+                  <div className="space-y-6">
+                    {userNavItems.map((g) => (
+                      <div key={g.group}>
+                        <p className="text-[10px] uppercase tracking-wider text-white/25 px-2 mb-2">{g.group}</p>
+                        <div className="space-y-1">
+                          {g.items.map((item) => (
+                            <button key={item.tab} onClick={() => { setUserTab(item.tab); setSidebarOpen(false); }}
+                              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${userTab === item.tab ? 'bg-white/10 text-white' : 'text-white/50 hover:bg-white/5 hover:text-white/80'}`}>
+                              <item.icon className="w-4 h-4" />{item.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     ))}
                   </div>
                 )}
@@ -700,7 +705,56 @@ export default function Home() {
                     <Button variant="ghost" onClick={() => { setDeliveredKey(null); setDeliveredKeys([]); refreshUser(); }} className="text-white/40 hover:text-white/70 hover:bg-white/5 text-xs tracking-wider">COMPRAR OUTRA</Button>
                   </div>
                 </div>
-              ) : userTab === 'dashboard' ? (
+              ) : (
+                <Tabs value={userTab} onValueChange={setUserTab}>
+                  <div className="space-y-2 mb-4">
+                    {/* Central */}
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-[10px] uppercase tracking-widest text-white/20 px-1">Central</span>
+                      <div className="flex-1 h-px bg-white/[0.04]" />
+                    </div>
+                    <TabsList className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-1 w-full sm:w-auto">
+                      {[
+                        { value: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+                      ].map((t) => (
+                        <TabsTrigger key={t.value} value={t.value} className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/40 rounded-lg text-xs tracking-wider gap-1.5">
+                          <t.icon className="w-3.5 h-3.5" />{t.label}
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+                    {/* Gerador */}
+                    <div className="flex items-center gap-2 mb-1 mt-3">
+                      <span className="text-[10px] uppercase tracking-widest text-white/20 px-1">Gerador</span>
+                      <div className="flex-1 h-px bg-white/[0.04]" />
+                    </div>
+                    <TabsList className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-1 w-full sm:w-auto">
+                      {[
+                        { value: 'generate', icon: Key, label: 'Gerar Key' },
+                        { value: 'history', icon: History, label: 'Historico Keys' },
+                      ].map((t) => (
+                        <TabsTrigger key={t.value} value={t.value} className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/40 rounded-lg text-xs tracking-wider gap-1.5">
+                          <t.icon className="w-3.5 h-3.5" />{t.label}
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+                    {/* Instalacao */}
+                    <div className="flex items-center gap-2 mb-1 mt-3">
+                      <span className="text-[10px] uppercase tracking-widest text-white/20 px-1">Instalacao</span>
+                      <div className="flex-1 h-px bg-white/[0.04]" />
+                    </div>
+                    <TabsList className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-1 w-full sm:w-auto">
+                      {[
+                        { value: 'tutorials', icon: Play, label: 'Tutoriais' },
+                        { value: 'links', icon: Link2, label: 'Links' },
+                      ].map((t) => (
+                        <TabsTrigger key={t.value} value={t.value} className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/40 rounded-lg text-xs tracking-wider gap-1.5">
+                          <t.icon className="w-3.5 h-3.5" />{t.label}
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+                  </div>
+
+                <TabsContent value="dashboard" className="mt-0">
                 <div>
                   {loggedUser ? (
                     <>
@@ -756,7 +810,9 @@ export default function Home() {
                     </div>
                   )}
                 </div>
-              ) : userTab === 'generate' ? (
+                </TabsContent>
+
+                <TabsContent value="generate" className="mt-0">
                 <>
                   <div className="flex items-center gap-3 mb-6">
                     <Key className="w-5 h-5 text-white/40" />
@@ -855,7 +911,9 @@ export default function Home() {
                     </div>
                   )}
                 </>
-              ) : userTab === 'history' ? (
+                </TabsContent>
+
+                <TabsContent value="history" className="mt-0">
                 <div>
                   <div className="flex items-center gap-3 mb-4">
                     <History className="w-5 h-5 text-white/40" />
@@ -904,7 +962,9 @@ export default function Home() {
                     </div>
                   )}
                 </div>
-              ) : userTab === 'tutorials' ? (
+                </TabsContent>
+
+                <TabsContent value="tutorials" className="mt-0">
                 <div>
                   <div className="flex items-center gap-3 mb-6">
                     <Play className="w-5 h-5 text-white/40" />
@@ -931,7 +991,9 @@ export default function Home() {
                     </div>
                   )}
                 </div>
-              ) : userTab === 'links' ? (
+                </TabsContent>
+
+                <TabsContent value="links" className="mt-0">
                 <div>
                   <div className="flex items-center gap-3 mb-6">
                     <Link2 className="w-5 h-5 text-white/40" />
@@ -966,7 +1028,9 @@ export default function Home() {
                     </div>
                   )}
                 </div>
-              ) : null}
+                </TabsContent>
+                </Tabs>
+              )}
             </motion.div>
           ) : (
             /* ====== ADMIN VIEW ====== */
