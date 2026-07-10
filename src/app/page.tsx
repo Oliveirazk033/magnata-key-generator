@@ -810,7 +810,7 @@ export default function Home() {
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -6, scale: 0.96 }}
                         transition={{ duration: 0.15 }}
-                        className="absolute right-0 top-11 z-50 glass-strong rounded-xl border border-white/[0.08] w-[calc(100vw-1.5rem)] sm:w-[320px] max-h-[400px] flex flex-col"
+                        className="absolute right-0 top-11 z-50 bg-black/95 backdrop-blur-xl rounded-xl border border-white/[0.08] w-[calc(100vw-1.5rem)] sm:w-[320px] max-h-[400px] flex flex-col"
                       >
                         <div className="flex items-center justify-between p-3 border-b border-white/[0.06]">
                           <span className="text-xs font-semibold tracking-wider text-white">Notificacoes</span>
@@ -862,7 +862,7 @@ export default function Home() {
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -6, scale: 0.96 }}
                         transition={{ duration: 0.15 }}
-                        className="fixed left-2 right-2 top-12 sm:absolute sm:left-auto sm:right-0 sm:w-[320px] z-50 glass-strong rounded-xl border border-white/[0.08] max-h-[70vh] flex flex-col"
+                        className="fixed left-2 right-2 top-12 sm:absolute sm:left-auto sm:right-0 sm:w-[320px] z-50 bg-black/95 backdrop-blur-xl rounded-xl border border-white/[0.08] max-h-[70vh] flex flex-col"
                       >
                         <div className="flex items-center justify-between p-3 border-b border-white/[0.06]">
                           <span className="text-xs font-semibold tracking-wider text-white">Notificacoes</span>
