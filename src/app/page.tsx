@@ -23,7 +23,7 @@ import Starfield from '@/components/Starfield';
 import {
   Key, Shield, Plus, Trash2, RefreshCw, Coins, ArrowRight,
   Lock, Unlock, History, Copy, Check, Store, BarChart3,
-  Package, BookOpen, X, LayoutDashboard, Hash, User, UserPlus, LogIn, LogOut, Wallet, Play, Link2, ExternalLink, FolderOpen, Tag, Pencil,
+  Package, BookOpen, X, LayoutDashboard, Hash, User, UserPlus, LogIn, LogOut, Wallet, Play, Link2, ExternalLink, FolderOpen, Tag, Pencil, MoreVertical,
 } from 'lucide-react';
 
 /* ===== Types ===== */
@@ -118,6 +118,7 @@ export default function Home() {
   const [adminTab, setAdminTab] = useState('dashboard');
   const [userTab, setUserTab] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   // User management
   const [newUser, setNewUser] = useState({ username: '', password: '', displayName: '', credits: '10' });
@@ -796,20 +797,42 @@ export default function Home() {
                   </div>
                 </div>
               ) : (
-                <Tabs value={userTab} onValueChange={setUserTab}>
-                  <TabsList className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-1 w-full sm:w-auto mb-4">
-                    {[
-                      { value: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-                      { value: 'generate', icon: Key, label: 'Gerar Key' },
-                      { value: 'history', icon: History, label: 'Historico Keys' },
-                      { value: 'tutorials', icon: Play, label: 'Tutoriais' },
-                      { value: 'links', icon: Link2, label: 'Links' },
-                    ].map((t) => (
-                      <TabsTrigger key={t.value} value={t.value} className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/40 rounded-lg text-xs tracking-wider gap-1.5">
-                        <t.icon className="w-3.5 h-3.5" />{t.label}
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
+                <Tabs value={userTab} onValueChange={(v) => { setUserTab(v); setUserMenuOpen(false); }}>
+                  <div className="relative mb-4">
+                    <button onClick={() => setUserMenuOpen(!userMenuOpen)} className="w-9 h-9 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center text-white/40 hover:text-white/70 hover:bg-white/[0.06] transition-colors">
+                      <MoreVertical className="w-4 h-4" />
+                    </button>
+                    <AnimatePresence>
+                      {userMenuOpen && (
+                        <>
+                          <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
+                          <motion.div
+                            initial={{ opacity: 0, y: -6, scale: 0.96 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: -6, scale: 0.96 }}
+                            transition={{ duration: 0.15 }}
+                            className="absolute left-0 top-12 z-50 glass-strong rounded-xl border border-white/[0.08] p-1.5 min-w-[180px]"
+                          >
+                            {[
+                              { value: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+                              { value: 'generate', icon: Key, label: 'Gerar Key' },
+                              { value: 'history', icon: History, label: 'Historico Keys' },
+                              { value: 'tutorials', icon: Play, label: 'Tutoriais' },
+                              { value: 'links', icon: Link2, label: 'Links' },
+                            ].map((t) => (
+                              <button
+                                key={t.value}
+                                onClick={() => { setUserTab(t.value); setUserMenuOpen(false); }}
+                                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs tracking-wider transition-colors ${userTab === t.value ? 'bg-white/10 text-white' : 'text-white/40 hover:bg-white/5 hover:text-white/70'}`}
+                              >
+                                <t.icon className="w-3.5 h-3.5" />{t.label}
+                              </button>
+                            ))}
+                          </motion.div>
+                        </>
+                      )}
+                    </AnimatePresence>
+                  </div>
 
                 <TabsContent value="dashboard" className="mt-0">
                 <div>
