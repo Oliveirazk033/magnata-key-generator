@@ -23,7 +23,7 @@ import Starfield from '@/components/Starfield';
 import {
   Key, Shield, Plus, Trash2, RefreshCw, Coins, ArrowRight,
   Lock, Unlock, History, Copy, Check, Store, BarChart3,
-  Package, BookOpen, X, LayoutDashboard, Hash, User, UserPlus, LogIn, LogOut, Wallet, Play, Link2, ExternalLink, FolderOpen, Tag,
+  Package, BookOpen, X, LayoutDashboard, Hash, User, UserPlus, LogIn, LogOut, Wallet, Play, Link2, ExternalLink, FolderOpen, Tag, Pencil,
 } from 'lucide-react';
 
 /* ===== Types ===== */
@@ -110,6 +110,8 @@ export default function Home() {
 
   // Admin form states
   const [newProduct, setNewProduct] = useState({ name: '', description: '', duration: '', credits: '', categoryId: '' });
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editProductForm, setEditProductForm] = useState({ name: '', description: '', duration: '', credits: '', categoryId: '' });
   const [newKeysText, setNewKeysText] = useState('');
   const [addingKeysTo, setAddingKeysTo] = useState('');
   const [copiedKey, setCopiedKey] = useState(false);
@@ -558,6 +560,24 @@ export default function Home() {
     try {
       await fetch(`/api/products?id=${id}`, { method: 'DELETE', headers: getAdminHeaders() });
       toast.success('Produto desativado'); fetchProducts(adminCategoryFilter || undefined); fetchCategories(true);
+    } catch { toast.error('Erro'); }
+  };
+
+  const handleEditProduct = (p: Product) => {
+    setEditingProduct(p);
+    setEditProductForm({ name: p.name, description: p.description || '', duration: p.duration, credits: String(p.credits), categoryId: p.categoryId || '' });
+  };
+
+  const handleSaveEditProduct = async () => {
+    if (!editingProduct || !editProductForm.name || !editProductForm.duration || !editProductForm.credits) { toast.error('Preencha todos os campos obrigatorios'); return; }
+    try {
+      const res = await fetch(`/api/products?id=${editingProduct.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', ...getAdminHeaders() }, body: JSON.stringify({ ...editProductForm, categoryId: editProductForm.categoryId || null }) });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`"${editProductForm.name}" atualizado!`);
+        setEditingProduct(null);
+        fetchProducts(adminCategoryFilter || undefined); fetchCategories(true);
+      } else { toast.error(data.error || 'Erro ao editar'); }
     } catch { toast.error('Erro'); }
   };
 
@@ -1218,7 +1238,10 @@ export default function Home() {
                             <div className="flex items-center gap-2 flex-wrap"><span className="text-sm font-medium text-white">{p.name}</span>{p.categoryName && <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20 text-[10px] shrink-0"><Tag className="w-2.5 h-2.5 mr-0.5" />{p.categoryName}</Badge>}{!p.isActive && <Badge className="bg-red-500/10 text-red-400 border-red-500/20 text-[10px] shrink-0">Inativo</Badge>}</div>
                             <div className="flex items-center gap-3 mt-1 text-[11px] text-white/40"><span>{p.duration}</span><span className="text-emerald-400">{p.credits} cr.</span><span className={p._count.keys > 0 ? 'text-emerald-400' : 'text-red-400'}>{p._count.keys} keys</span></div>
                           </div>
-                          <button onClick={() => handleDeleteProduct(p.id, p.name)} className="text-white/20 hover:text-red-400 transition-colors p-1"><Trash2 className="w-4 h-4" /></button>
+                          <div className="flex items-center gap-1">
+                            <button onClick={() => handleEditProduct(p)} className="text-white/20 hover:text-amber-400 transition-colors p-1"><Pencil className="w-4 h-4" /></button>
+                            <button onClick={() => handleDeleteProduct(p.id, p.name)} className="text-white/20 hover:text-red-400 transition-colors p-1"><Trash2 className="w-4 h-4" /></button>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -1408,6 +1431,29 @@ export default function Home() {
       <footer className="relative z-10 border-t border-white/[0.05] mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 text-center"><p className="text-[11px] text-white/15 tracking-wider">Magnata Key Generator</p></div>
       </footer>
+
+      {/* Edit Product Modal */}
+      <Dialog open={!!editingProduct} onOpenChange={(open) => { if (!open) setEditingProduct(null); }}>
+        <DialogContent className="glass-strong rounded-2xl max-w-md p-6 bg-transparent border-white/10">
+          <DialogHeader>
+            <DialogTitle className="text-white text-base tracking-wider font-bold flex items-center gap-2"><Pencil className="w-4 h-4 text-amber-400" />Editar Produto</DialogTitle>
+            <DialogDescription className="text-white/30 text-xs">Altere os dados do produto</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 mt-2">
+            <select value={editProductForm.categoryId} onChange={(e) => setEditProductForm({ ...editProductForm, categoryId: e.target.value })} className="glass-input w-full rounded-xl px-4 py-2.5 text-sm text-white/80">
+              <option value="">Sem categoria</option>
+              {categories.filter(c => c.isActive).map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
+            </select>
+            <input placeholder="Nome" value={editProductForm.name} onChange={(e) => setEditProductForm({ ...editProductForm, name: e.target.value })} className="glass-input w-full rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-white/20" />
+            <input placeholder="Duracao (1 dia)" value={editProductForm.duration} onChange={(e) => setEditProductForm({ ...editProductForm, duration: e.target.value })} className="glass-input w-full rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-white/20" />
+            <input type="number" placeholder="Creditos" value={editProductForm.credits} onChange={(e) => setEditProductForm({ ...editProductForm, credits: e.target.value })} className="glass-input w-full rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-white/20" />
+            <div className="flex gap-2 pt-1">
+              <button onClick={() => setEditingProduct(null)} className="flex-1 h-10 rounded-xl bg-white/5 text-white/60 text-xs font-medium tracking-wider hover:bg-white/10 transition-colors">CANCELAR</button>
+              <button onClick={handleSaveEditProduct} className="flex-1 h-10 rounded-xl bg-white text-black text-xs font-medium tracking-wider hover:bg-white/90 transition-colors">SALVAR</button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Admin Login Modal */}
       <Dialog open={showAdminLogin} onOpenChange={setShowAdminLogin}>

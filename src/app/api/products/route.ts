@@ -83,6 +83,42 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// PATCH /api/products?id=xxx — Editar produto (admin)
+export async function PATCH(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get('id');
+
+  if (!id) {
+    return NextResponse.json({ error: 'id é obrigatório' }, { status: 400 });
+  }
+
+  const authHeader = request.headers.get('x-admin-key');
+  if (authHeader !== process.env.ADMIN_SECRET) {
+    return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
+  }
+
+  try {
+    await ensureTables();
+    const client = getClient();
+    const body = await request.json();
+    const { name, description, duration, credits, categoryId } = body;
+
+    if (!name || !duration || credits === undefined) {
+      return NextResponse.json({ error: 'name, duration e credits sao obrigatorios' }, { status: 400 });
+    }
+
+    await client.execute({
+      sql: `UPDATE "Product" SET "name" = ?, "description" = ?, "duration" = ?, "credits" = ?, "categoryId" = ? WHERE "id" = ?`,
+      args: [name, description || null, duration, Number(credits), categoryId || null, id],
+    });
+
+    return NextResponse.json({ success: true, product: { id, name, description: description || null, duration, credits: Number(credits), categoryId: categoryId || null } });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Erro desconhecido';
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
 // DELETE /api/products?id=xxx — Desativar produto (admin)
 export async function DELETE(request: NextRequest) {
   const { searchParams } = new URL(request.url);
