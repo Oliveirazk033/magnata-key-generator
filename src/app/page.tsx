@@ -23,7 +23,7 @@ import Starfield from '@/components/Starfield';
 import {
   Key, Shield, Plus, Trash2, RefreshCw, Coins, ArrowRight,
   Lock, Unlock, History, Copy, Check, Store, BarChart3,
-  Package, BookOpen, X, LayoutDashboard, Hash, User, UserPlus, LogIn, LogOut, Wallet, Play, Link2, ExternalLink, FolderOpen, Tag, Pencil, MoreVertical, Bell, BellOff, Megaphone, CreditCard, Loader2,
+  Package, BookOpen, X, LayoutDashboard, Hash, User, UserPlus, LogIn, LogOut, Wallet, Play, Link2, ExternalLink, FolderOpen, Tag, Pencil, MoreVertical, Bell, BellOff, Megaphone, CreditCard, Loader2, ShoppingCart, CheckCircle, XCircle, Clock,
 } from 'lucide-react';
 
 /* ===== Types ===== */
@@ -71,6 +71,20 @@ interface NotificationItem {
   title: string; message: string; type: string;
   isRead: boolean; createdAt: string;
 }
+interface OrderItem {
+  id: string; userId: string; credits: number; amount: number;
+  buyerName: string; buyerEmail: string; buyerCpf: string;
+  status: string; pixKey: string | null; adminNotes: string | null;
+  createdAt: string; updatedAt: string;
+  username?: string; userDisplayName?: string;
+}
+const creditPackages = [
+  { credits: 5, price: 5, popular: false },
+  { credits: 15, price: 12, popular: true },
+  { credits: 30, price: 22, popular: false },
+  { credits: 50, price: 35, popular: false },
+  { credits: 100, price: 60, popular: true },
+];
 
 /* ===== Main ===== */
 export default function Home() {
@@ -292,6 +306,88 @@ export default function Home() {
   const [pixChecking, setPixChecking] = useState(false);
   const [pixResults, setPixResults] = useState<{ amount: number; description: string; senderName: string; credited: boolean; username: string | null; creditsAdded: number | null; message: string }[]>([]);
 
+  // Buy credits
+  const [buyStep, setBuyStep] = useState<'packages' | 'form' | 'pix' | 'done'>('packages');
+  const [selectedPkg, setSelectedPkg] = useState<{ credits: number; price: number } | null>(null);
+  const [buyForm, setBuyForm] = useState({ name: '', email: '', cpf: '' });
+  const [buyLoading, setBuyLoading] = useState(false);
+  const [createdOrderId, setCreatedOrderId] = useState('');
+  const [userOrders, setUserOrders] = useState<OrderItem[]>([]);
+  const [adminOrders, setAdminOrders] = useState<OrderItem[]>([]);
+  const [orderFilter, setOrderFilter] = useState('pending');
+
+  const fetchUserOrders = async () => {
+    if (!loggedUser) return;
+    try {
+      const res = await fetch('/api/orders', { headers: getUserHeaders() });
+      const data = await res.json();
+      if (data.orders) setUserOrders(data.orders);
+    } catch {}
+  };
+
+  const fetchAdminOrders = async (status?: string) => {
+    const s = status || orderFilter;
+    try {
+      const res = await fetch(`/api/orders?status=${s}`, { headers: getAdminHeaders() });
+      const data = await res.json();
+      if (data.orders) setAdminOrders(data.orders);
+    } catch {}
+  };
+
+  const handleSelectPackage = (pkg: typeof creditPackages[0]) => {
+    setSelectedPkg(pkg);
+    setBuyStep('form');
+  };
+
+  const handleSubmitBuy = async () => {
+    if (!selectedPkg || !buyForm.name || !buyForm.email || !buyForm.cpf) {
+      toast.error('Preencha todos os campos'); return;
+    }
+    const cleanCpf = buyForm.cpf.replace(/\D/g, '');
+    if (cleanCpf.length < 11) { toast.error('CPF invalido'); return; }
+    setBuyLoading(true);
+    try {
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getUserHeaders() },
+        body: JSON.stringify({
+          credits: selectedPkg.credits,
+          amount: selectedPkg.price,
+          buyerName: buyForm.name,
+          buyerEmail: buyForm.email,
+          buyerCpf: cleanCpf,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCreatedOrderId(data.orderId);
+        setBuyStep('pix');
+        toast.success('Pedido criado! Faca o PIX abaixo.');
+      } else {
+        toast.error(data.error || 'Erro ao criar pedido');
+      }
+    } catch { toast.error('Erro ao criar pedido'); }
+    setBuyLoading(false);
+  };
+
+  const handleAdminOrderAction = async (orderId: string, action: 'approve' | 'reject') => {
+    try {
+      const res = await fetch(`/api/orders/${orderId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...getAdminHeaders() },
+        body: JSON.stringify({ action }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(action === 'approve' ? 'Pagamento aprovado e creditos adicionados!' : 'Pedido recusado');
+        fetchAdminOrders();
+        fetchUsers();
+      } else {
+        toast.error(data.error || 'Erro ao processar');
+      }
+    } catch { toast.error('Erro ao processar pedido'); }
+  };
+
   const handleCheckPix = async () => {
     setPixChecking(true);
     try {
@@ -334,9 +430,11 @@ export default function Home() {
   // Ensure categories are loaded when switching to products tab
   useEffect(() => {
     if (isAdmin && adminTab === 'products' && categories.length === 0) { fetchCategories(true); }
+    if (isAdmin && adminTab === 'orders') { fetchAdminOrders(); }
   }, [isAdmin, adminTab, categories.length, fetchCategories]);
   useEffect(() => { fetchUserHistory(); }, [fetchUserHistory]);
   useEffect(() => { if (loggedUser) fetchNotifications(); }, [loggedUser, fetchNotifications]);
+  useEffect(() => { fetchUserOrders(); }, [loggedUser]);
 
   // --- Route & session management ---
   // Sync isAdmin with route
@@ -719,6 +817,7 @@ export default function Home() {
   const userNavItems = [
     { group: 'Central', items: [{ icon: LayoutDashboard, label: 'Dashboard', tab: 'dashboard' }] },
     { group: 'Gerador', items: [{ icon: Key, label: 'Gerar Key', tab: 'generate' }, { icon: History, label: 'Historico Keys', tab: 'history' }] },
+    { group: 'Compras', items: [{ icon: ShoppingCart, label: 'Comprar Creditos', tab: 'buy' }] },
     { group: 'Instalacao', items: [{ icon: Play, label: 'Tutoriais', tab: 'tutorials' }, { icon: Link2, label: 'Links', tab: 'links' }] },
   ];
 
@@ -727,7 +826,7 @@ export default function Home() {
         { group: 'Central', items: [{ icon: LayoutDashboard, label: 'Dashboard', tab: 'dashboard' }] },
         { group: 'Gerador', items: [{ icon: Key, label: 'Gerar Keys', tab: 'products' }, { icon: Package, label: 'Estoque', tab: 'stock' }, { icon: History, label: 'Historico Keys', tab: 'sales' }] },
         { group: 'Instalacao', items: [{ icon: Play, label: 'Tutoriais', tab: 'tutorials' }, { icon: Link2, label: 'Links', tab: 'links' }] },
-        { group: 'Sistema', items: [{ icon: User, label: 'Usuarios', tab: 'users' }, { icon: Bell, label: 'Notificacoes', tab: 'notifications' }, { icon: CreditCard, label: 'Pagamentos', tab: 'payments' }] },
+        { group: 'Sistema', items: [{ icon: User, label: 'Usuarios', tab: 'users' }, { icon: Bell, label: 'Notificacoes', tab: 'notifications' }, { icon: CreditCard, label: 'Pagamentos', tab: 'payments' }, { icon: ShoppingCart, label: 'Pedidos', tab: 'orders' }] },
       ]
     : [];
 
@@ -1257,6 +1356,160 @@ export default function Home() {
                   )}
                 </div>
                 </TabsContent>
+
+                {/* Buy Credits Tab */}
+                <TabsContent value="buy" className="mt-0">
+                <div>
+                  <div className="flex items-center gap-3 mb-6">
+                    <ShoppingCart className="w-5 h-5 text-white/40" />
+                    <h1 className="text-xl font-bold tracking-wider text-white">Comprar Creditos</h1>
+                  </div>
+
+                  {/* Step 1: Package Selection */}
+                  {buyStep === 'packages' && (
+                    <div className="space-y-3">
+                      <p className="text-sm text-white/40 mb-4">Escolha um pacote de creditos para comprar via PIX:</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {creditPackages.map((pkg, i) => (
+                          <motion.div
+                            key={i}
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: i * 0.05 }}
+                            onClick={() => handleSelectPackage(pkg)}
+                            className="glass glass-hover rounded-xl p-5 cursor-pointer relative overflow-hidden group"
+                          >
+                            {pkg.popular && (
+                              <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-white/10 text-[10px] font-semibold text-white/70 tracking-wider">POPULAR</div>
+                            )}
+                            <div className="flex items-center gap-2 mb-3">
+                              <Coins className="w-5 h-5 text-amber-400/70" />
+                              <span className="text-2xl font-bold text-white">{pkg.credits}</span>
+                              <span className="text-xs text-white/30">creditos</span>
+                            </div>
+                            <div className="flex items-baseline gap-1">
+                              <span className="text-xs text-white/40">R$</span>
+                              <span className="text-xl font-bold text-white">{pkg.price}</span>
+                              <span className="text-[10px] text-white/30 line-through ml-1">R${(pkg.credits * 1).toFixed(0)}</span>
+                            </div>
+                            {pkg.credits / pkg.price > 1 && (
+                              <p className="text-[10px] text-green-400/60 mt-2">Economia de {Math.round((1 - pkg.price / pkg.credits) * 100)}%</p>
+                            )}
+                            <div className="mt-4 h-8 rounded-lg bg-white/5 flex items-center justify-center text-xs font-medium text-white/50 group-hover:bg-white group-hover:text-black transition-colors">
+                              Selecionar
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Step 2: Form */}
+                  {buyStep === 'form' && selectedPkg && (
+                    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="max-w-md">
+                      <button onClick={() => setBuyStep('packages')} className="text-xs text-white/30 hover:text-white/60 transition-colors mb-4 flex items-center gap-1"><ArrowRight className="w-3 h-3 rotate-180" /> Voltar aos pacotes</button>
+                      <div className="glass rounded-xl p-5 space-y-4">
+                        <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
+                          <div className="flex items-center gap-2">
+                            <Coins className="w-4 h-4 text-amber-400/70" />
+                            <span className="text-sm font-semibold text-white">{selectedPkg.credits} creditos</span>
+                          </div>
+                          <span className="text-lg font-bold text-white">R$ {selectedPkg.price.toFixed(2)}</span>
+                        </div>
+                        <div>
+                          <label className="text-[11px] text-white/40 font-medium tracking-wider mb-1.5 block">NOME COMPLETO</label>
+                          <input placeholder="Seu nome completo" value={buyForm.name} onChange={(e) => setBuyForm({ ...buyForm, name: e.target.value })} className="glass-input w-full rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-white/20" />
+                        </div>
+                        <div>
+                          <label className="text-[11px] text-white/40 font-medium tracking-wider mb-1.5 block">EMAIL</label>
+                          <input type="email" placeholder="seuemail@email.com" value={buyForm.email} onChange={(e) => setBuyForm({ ...buyForm, email: e.target.value })} className="glass-input w-full rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-white/20" />
+                        </div>
+                        <div>
+                          <label className="text-[11px] text-white/40 font-medium tracking-wider mb-1.5 block">CPF</label>
+                          <input placeholder="000.000.000-00" value={buyForm.cpf} onChange={(e) => setBuyForm({ ...buyForm, cpf: e.target.value })} maxLength={14} className="glass-input w-full rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-white/20" />
+                        </div>
+                        <button onClick={handleSubmitBuy} disabled={buyLoading} className="w-full h-11 rounded-xl bg-white text-black text-xs font-semibold tracking-wider hover:bg-white/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
+                          {buyLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
+                          {buyLoading ? 'CRIANDO PEDIDO...' : 'IR PARA PAGAMENTO PIX'}
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {/* Step 3: PIX Info */}
+                  {buyStep === 'pix' && selectedPkg && (
+                    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="max-w-md">
+                      <div className="glass rounded-xl p-5 space-y-4">
+                        <div className="text-center pb-3 border-b border-white/[0.06]">
+                          <CheckCircle className="w-10 h-10 text-green-400/60 mx-auto mb-2" />
+                          <p className="text-sm font-semibold text-white">Pedido #{createdOrderId.slice(0, 8)}</p>
+                          <p className="text-2xl font-bold text-white mt-1">R$ {selectedPkg.price.toFixed(2)}</p>
+                          <p className="text-xs text-white/40">{selectedPkg.credits} creditos</p>
+                        </div>
+
+                        <div className="bg-white/[0.03] rounded-xl p-4 space-y-3">
+                          <p className="text-xs text-white/50 font-medium tracking-wider text-center">FACA O PIX PARA:</p>
+                          <div className="text-center">
+                            <p className="text-[11px] text-white/30">Chave PIX (Email)</p>
+                            <p className="text-sm font-mono font-bold text-white mt-1 break-all">adrianviniciusdeoliveira1725@gmail.com</p>
+                          </div>
+                          <div className="border-t border-white/[0.06] pt-3">
+                            <p className="text-[11px] text-white/30">Nome do titular</p>
+                            <p className="text-sm font-semibold text-white mt-0.5">ADRIAN VINICIUS DE OLIVEIRA</p>
+                          </div>
+                        </div>
+
+                        <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-3">
+                          <p className="text-[11px] text-amber-400/80 text-center">
+                            Apos fazer o PIX, aguarde a confirmacao do admin. Voce recebera uma notificacao quando os creditos forem adicionados.
+                          </p>
+                        </div>
+
+                        <div className="flex gap-2">
+                          <button onClick={() => { setBuyStep('packages'); setSelectedPkg(null); setBuyForm({ name: '', email: '', cpf: '' }); }} className="flex-1 h-10 rounded-xl bg-white/5 text-white/60 text-xs font-medium tracking-wider hover:bg-white/10 transition-colors">
+                            Novo Pedido
+                          </button>
+                          <button onClick={() => setBuyStep('done')} className="flex-1 h-10 rounded-xl bg-white text-black text-xs font-medium tracking-wider hover:bg-white/90 transition-colors">
+                            Ja paguei
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* User's order history */}
+                      {userOrders.length > 0 && (
+                        <div className="mt-6">
+                          <h3 className="text-sm font-semibold tracking-wider text-white/60 mb-3">Meus Pedidos</h3>
+                          <div className="space-y-2">
+                            {userOrders.map((o) => (
+                              <div key={o.id} className="glass rounded-lg p-3 flex items-center justify-between">
+                                <div>
+                                  <p className="text-xs font-medium text-white">{o.credits} creditos — R${Number(o.amount).toFixed(2)}</p>
+                                  <p className="text-[10px] text-white/30">{new Date(o.createdAt).toLocaleString('pt-BR')}</p>
+                                </div>
+                                <Badge className={o.status === 'approved' ? 'bg-green-500/20 text-green-400 border-green-500/30' : o.status === 'rejected' ? 'bg-red-500/20 text-red-400 border-red-500/30' : 'bg-amber-500/20 text-amber-400 border-amber-500/30'}>
+                                  {o.status === 'approved' ? 'Aprovado' : o.status === 'rejected' ? 'Recusado' : 'Pendente'}
+                                </Badge>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
+
+                  {/* Step 4: Done */}
+                  {buyStep === 'done' && (
+                    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="max-w-md text-center py-8">
+                      <Clock className="w-12 h-12 text-white/10 mx-auto mb-4" />
+                      <h3 className="text-lg font-bold text-white mb-2">Pagamento em analise</h3>
+                      <p className="text-sm text-white/40 mb-6">Seu pagamento sera confirmado em breve pelo admin. Voce recebera uma notificacao assim que os creditos forem adicionados a sua conta.</p>
+                      <button onClick={() => { setBuyStep('packages'); setSelectedPkg(null); fetchUserOrders(); }} className="h-10 px-6 rounded-xl bg-white/5 text-white/60 text-xs font-medium tracking-wider hover:bg-white/10 transition-colors">
+                        Voltar aos pacotes
+                      </button>
+                    </motion.div>
+                  )}
+                </div>
+                </TabsContent>
                 </Tabs>
               )}
             </motion.div>
@@ -1701,6 +1954,90 @@ export default function Home() {
                       <p>5. O sistema lê os emails, encontra o username na descricao e credita automaticamente</p>
                       <p className="text-white/60 mt-3">Cada R$1,00 = 1 credito adicionado ao usuario</p>
                     </div>
+                  </div>
+                </TabsContent>
+
+                {/* Orders Tab (Admin) */}
+                <TabsContent value="orders" className="space-y-3 mt-0">
+                  <div className="glass rounded-xl p-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-sm font-semibold tracking-wider text-white flex items-center gap-2"><ShoppingCart className="w-4 h-4 text-white/40" />Pedidos de Compra</h3>
+                      <div className="flex items-center gap-2">
+                        {['pending', 'approved', 'rejected'].map((s) => (
+                          <button key={s} onClick={() => { setOrderFilter(s); fetchAdminOrders(s); }} className={`px-3 py-1 rounded-lg text-[10px] font-medium tracking-wider transition-colors ${orderFilter === s ? 'bg-white text-black' : 'bg-white/5 text-white/40 hover:text-white/60'}`}>
+                            {s === 'pending' ? 'Pendentes' : s === 'approved' ? 'Aprovados' : 'Recusados'}
+                            {s === 'pending' && adminOrders.filter((o: any) => o.status === 'pending').length > 0 && (
+                              <span className="ml-1 inline-flex items-center justify-center w-4 h-4 rounded-full bg-red-500 text-white text-[9px]">{adminOrders.length}</span>
+                            )}
+                          </button>
+                        ))}
+                        <button onClick={() => fetchAdminOrders()} className="text-white/30 hover:text-white/60 transition-colors p-1"><RefreshCw className="w-3.5 h-3.5" /></button>
+                      </div>
+                    </div>
+
+                    {adminOrders.length === 0 ? (
+                      <div className="text-center py-12"><ShoppingCart className="w-10 h-10 text-white/10 mx-auto mb-3" /><p className="text-sm text-white/20">Nenhum pedido {orderFilter === 'pending' ? 'pendente' : ''}.</p></div>
+                    ) : (
+                      <div className="space-y-3 max-h-[600px] overflow-y-auto custom-scrollbar">
+                        {adminOrders.map((order: any) => (
+                          <div key={order.id} className="rounded-xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
+                            <div className="p-4">
+                              <div className="flex items-start justify-between mb-3">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
+                                    <Coins className="w-5 h-5 text-amber-400/70" />
+                                  </div>
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-sm font-bold text-white">R$ {Number(order.amount).toFixed(2)}</span>
+                                      <Badge className="bg-amber-500/10 text-amber-400 border-amber-500/20 text-[10px]">{order.credits} creditos</Badge>
+                                    </div>
+                                    <p className="text-[11px] text-white/30 mt-0.5">
+                                      {order.userDisplayName || order.username ? `@${order.username}` : 'Usuario'}
+                                      <span className="mx-1.5">|</span>
+                                      {new Date(order.createdAt).toLocaleString('pt-BR')}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3">
+                                <div className="bg-white/[0.03] rounded-lg p-2.5">
+                                  <p className="text-[10px] text-white/25 tracking-wider">NOME</p>
+                                  <p className="text-xs text-white font-medium mt-0.5 truncate">{order.buyerName}</p>
+                                </div>
+                                <div className="bg-white/[0.03] rounded-lg p-2.5">
+                                  <p className="text-[10px] text-white/25 tracking-wider">EMAIL</p>
+                                  <p className="text-xs text-white font-medium mt-0.5 truncate">{order.buyerEmail}</p>
+                                </div>
+                                <div className="bg-white/[0.03] rounded-lg p-2.5">
+                                  <p className="text-[10px] text-white/25 tracking-wider">CPF</p>
+                                  <p className="text-xs text-white font-medium mt-0.5 font-mono">{String(order.buyerCpf).replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}</p>
+                                </div>
+                              </div>
+
+                              {order.status === 'pending' ? (
+                                <div className="flex gap-2">
+                                  <button onClick={() => handleAdminOrderAction(order.id, 'approve')} className="flex-1 h-9 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400 text-xs font-medium tracking-wider hover:bg-green-500/20 transition-colors flex items-center justify-center gap-1.5">
+                                    <CheckCircle className="w-3.5 h-3.5" /> APROVAR
+                                  </button>
+                                  <button onClick={() => handleAdminOrderAction(order.id, 'reject')} className="flex-1 h-9 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-medium tracking-wider hover:bg-red-500/20 transition-colors flex items-center justify-center gap-1.5">
+                                    <XCircle className="w-3.5 h-3.5" /> RECUSAR
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2">
+                                  <Badge className={order.status === 'approved' ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30'}>
+                                    {order.status === 'approved' ? 'Aprovado' : 'Recusado'}
+                                  </Badge>
+                                  {order.adminNotes && <span className="text-[10px] text-white/25">— {order.adminNotes}</span>}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </TabsContent>
               </Tabs>
