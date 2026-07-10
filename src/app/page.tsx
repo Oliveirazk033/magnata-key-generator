@@ -1030,6 +1030,20 @@ export default function Home() {
                       </TabsTrigger>
                     ))}
                   </TabsList>
+                  {/* Sistema */}
+                  <div className="flex items-center gap-2 mb-1 mt-3">
+                    <span className="text-[10px] uppercase tracking-widest text-white/20 px-1">Sistema</span>
+                    <div className="flex-1 h-px bg-white/[0.04]" />
+                  </div>
+                  <TabsList className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-1 w-full sm:w-auto">
+                    {[
+                      { value: 'users', icon: User, label: 'Usuarios' },
+                    ].map((t) => (
+                      <TabsTrigger key={t.value} value={t.value} className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/40 rounded-lg text-xs tracking-wider gap-1.5">
+                        <t.icon className="w-3.5 h-3.5" />{t.label}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
                 </div>
 
                 {/* Dashboard Tab */}
