@@ -850,27 +850,6 @@ export default function Home() {
                           </div>
                         </motion.div>
                       </div>
-                      <div className="glass rounded-xl p-5">
-                        <h3 className="text-sm font-semibold tracking-wider text-white mb-4 flex items-center gap-2"><Package className="w-4 h-4 text-white/40" />Estoque Disponivel</h3>
-                        {activeProducts.length === 0 ? (
-                          <p className="text-sm text-white/30 text-center py-4">Nenhum produto.</p>
-                        ) : (
-                          <div className="space-y-2">
-                            {activeProducts.map((p) => (
-                              <div key={p.id} className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02]">
-                                <div>
-                                  <div className="flex items-center gap-2"><span className="text-sm font-medium text-white">{p.name}</span>{p.categoryName && <span className="text-[10px] text-blue-400/60">({p.categoryName})</span>}</div>
-                                  <span className="text-[11px] text-white/30 ml-2">{p.duration}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-[11px] text-white/40">{p.credits} cr.</span>
-                                  <Badge className={`text-[10px] ${p._count.keys > 0 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>{p._count.keys} disp.</Badge>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
                     </>
                   ) : (
                     <div className="glass rounded-xl p-12 text-center">
