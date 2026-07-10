@@ -23,7 +23,7 @@ import Starfield from '@/components/Starfield';
 import {
   Key, Shield, Plus, Trash2, RefreshCw, Coins, ArrowRight,
   Lock, Unlock, History, Copy, Check, Store, BarChart3,
-  Package, BookOpen, X, LayoutDashboard, Hash, User, UserPlus, LogIn, LogOut, Wallet, Play, Link2, ExternalLink, FolderOpen, Tag, Pencil, MoreVertical, Bell, BellOff, Megaphone, CreditCard, Loader2, ShoppingCart, CheckCircle, XCircle, Clock,
+  Package, BookOpen, X, LayoutDashboard, Hash, User, UserPlus, LogIn, LogOut, Wallet, Play, Link2, ExternalLink, FolderOpen, Tag, Pencil, MoreVertical, Bell, BellOff, Megaphone, CreditCard, Loader2, ShoppingCart, CheckCircle, XCircle, Clock, Settings, Save,
 } from 'lucide-react';
 
 /* ===== Types ===== */
@@ -78,7 +78,7 @@ interface OrderItem {
   createdAt: string; updatedAt: string;
   username?: string; userDisplayName?: string;
 }
-const creditPackages = [
+const defaultPackages = [
   { credits: 5, price: 5, popular: false },
   { credits: 15, price: 12, popular: true },
   { credits: 30, price: 22, popular: false },
@@ -307,6 +307,34 @@ export default function Home() {
   const [pixResults, setPixResults] = useState<{ amount: number; description: string; senderName: string; credited: boolean; username: string | null; creditsAdded: number | null; message: string }[]>([]);
 
   // Buy credits
+  const [siteConfig, setSiteConfig] = useState<{ pixKey: string; pixHolder: string; packages: typeof defaultPackages }>({ pixKey: 'adrianviniciusdeoliveiraa@gmail.com', pixHolder: 'ADRIAN VINICIUS DE OLIVEIRA', packages: defaultPackages });
+  const [editingPackages, setEditingPackages] = useState<typeof defaultPackages | null>(null);
+  const [configForm, setConfigForm] = useState({ pixKey: '', pixHolder: '' });
+
+  const fetchConfig = async () => {
+    try {
+      const res = await fetch('/api/config');
+      const data = await res.json();
+      if (data.pixKey) setSiteConfig(data);
+      setConfigForm({ pixKey: data.pixKey || '', pixHolder: data.pixHolder || '' });
+    } catch {}
+  };
+
+  const handleSaveConfig = async () => {
+    try {
+      const res = await fetch('/api/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...getAdminHeaders() },
+        body: JSON.stringify({ pixKey: configForm.pixKey, pixHolder: configForm.pixHolder, packages: editingPackages || siteConfig.packages }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Configuracao salva!');
+        fetchConfig();
+        setEditingPackages(null);
+      }
+    } catch { toast.error('Erro ao salvar'); }
+  };
   const [buyStep, setBuyStep] = useState<'packages' | 'form' | 'pix' | 'done'>('packages');
   const [selectedPkg, setSelectedPkg] = useState<{ credits: number; price: number } | null>(null);
   const [buyForm, setBuyForm] = useState({ name: '', email: '', cpf: '' });
@@ -334,7 +362,7 @@ export default function Home() {
     } catch {}
   };
 
-  const handleSelectPackage = (pkg: typeof creditPackages[0]) => {
+  const handleSelectPackage = (pkg: { credits: number; price: number; popular: boolean }) => {
     setSelectedPkg(pkg);
     setBuyStep('form');
   };
@@ -435,6 +463,7 @@ export default function Home() {
   useEffect(() => { fetchUserHistory(); }, [fetchUserHistory]);
   useEffect(() => { if (loggedUser) fetchNotifications(); }, [loggedUser, fetchNotifications]);
   useEffect(() => { fetchUserOrders(); }, [loggedUser]);
+  useEffect(() => { fetchConfig(); }, []);
 
   // --- Route & session management ---
   // Sync isAdmin with route
@@ -826,7 +855,7 @@ export default function Home() {
         { group: 'Central', items: [{ icon: LayoutDashboard, label: 'Dashboard', tab: 'dashboard' }] },
         { group: 'Gerador', items: [{ icon: Key, label: 'Gerar Keys', tab: 'products' }, { icon: Package, label: 'Estoque', tab: 'stock' }, { icon: History, label: 'Historico Keys', tab: 'sales' }] },
         { group: 'Instalacao', items: [{ icon: Play, label: 'Tutoriais', tab: 'tutorials' }, { icon: Link2, label: 'Links', tab: 'links' }] },
-        { group: 'Sistema', items: [{ icon: User, label: 'Usuarios', tab: 'users' }, { icon: Bell, label: 'Notificacoes', tab: 'notifications' }, { icon: CreditCard, label: 'Pagamentos', tab: 'payments' }, { icon: ShoppingCart, label: 'Pedidos', tab: 'orders' }] },
+        { group: 'Sistema', items: [{ icon: User, label: 'Usuarios', tab: 'users' }, { icon: Bell, label: 'Notificacoes', tab: 'notifications' }, { icon: CreditCard, label: 'Pagamentos', tab: 'payments' }, { icon: ShoppingCart, label: 'Pedidos', tab: 'orders' }, { icon: Settings, label: 'Configuracoes', tab: 'settings' }] },
       ]
     : [];
 
@@ -1370,7 +1399,7 @@ export default function Home() {
                     <div className="space-y-3">
                       <p className="text-sm text-white/40 mb-4">Escolha um pacote de creditos para comprar via PIX:</p>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {creditPackages.map((pkg, i) => (
+                        {siteConfig.packages.map((pkg, i) => (
                           <motion.div
                             key={i}
                             initial={{ opacity: 0, y: 8 }}
@@ -1451,11 +1480,11 @@ export default function Home() {
                           <p className="text-xs text-white/50 font-medium tracking-wider text-center">FACA O PIX PARA:</p>
                           <div className="text-center">
                             <p className="text-[11px] text-white/30">Chave PIX (Email)</p>
-                            <p className="text-sm font-mono font-bold text-white mt-1 break-all">adrianviniciusdeoliveira1725@gmail.com</p>
+                            <p className="text-sm font-mono font-bold text-white mt-1 break-all">{siteConfig.pixKey}</p>
                           </div>
                           <div className="border-t border-white/[0.06] pt-3">
                             <p className="text-[11px] text-white/30">Nome do titular</p>
-                            <p className="text-sm font-semibold text-white mt-0.5">ADRIAN VINICIUS DE OLIVEIRA</p>
+                            <p className="text-sm font-semibold text-white mt-0.5">{siteConfig.pixHolder}</p>
                           </div>
                         </div>
 
@@ -2034,6 +2063,72 @@ export default function Home() {
                                 </div>
                               )}
                             </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </TabsContent>
+
+                {/* Settings Tab (Admin) */}
+                <TabsContent value="settings" className="space-y-3 mt-0">
+                  <div className="glass rounded-xl p-5">
+                    <h3 className="text-sm font-semibold tracking-wider text-white mb-4 flex items-center gap-2"><Settings className="w-4 h-4 text-white/40" />Configuracoes do Site</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-[11px] text-white/40 font-medium tracking-wider mb-1.5 block">CHAVE PIX</label>
+                        <input value={configForm.pixKey} onChange={(e) => setConfigForm({ ...configForm, pixKey: e.target.value })} placeholder="email@exemplo.com" className="glass-input w-full rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-white/20" />
+                      </div>
+                      <div>
+                        <label className="text-[11px] text-white/40 font-medium tracking-wider mb-1.5 block">NOME DO TITULAR DA CONTA</label>
+                        <input value={configForm.pixHolder} onChange={(e) => setConfigForm({ ...configForm, pixHolder: e.target.value })} placeholder="NOME COMPLETO" className="glass-input w-full rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-white/20" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="glass rounded-xl p-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-sm font-semibold tracking-wider text-white">Pacotes de Creditos</h3>
+                      <button onClick={() => setEditingPackages(JSON.parse(JSON.stringify(siteConfig.packages)))} className="text-xs text-white/30 hover:text-white/60 transition-colors flex items-center gap-1"><Pencil className="w-3 h-3" /> Editar</button>
+                    </div>
+
+                    {editingPackages ? (
+                      <div className="space-y-3">
+                        {editingPackages.map((pkg, i) => (
+                          <div key={i} className="flex items-center gap-3 bg-white/[0.03] rounded-xl p-3">
+                            <Coins className="w-4 h-4 text-amber-400/60 shrink-0" />
+                            <input type="number" min="1" value={pkg.credits} onChange={(e) => { const p = [...editingPackages]; p[i].credits = parseInt(e.target.value) || 0; setEditingPackages(p); }} className="glass-input w-20 rounded-lg px-3 py-1.5 text-sm text-white text-center" placeholder="Cred" />
+                            <span className="text-white/20 text-xs">credits</span>
+                            <span className="text-white/20">=</span>
+                            <span className="text-white/30 text-xs">R$</span>
+                            <input type="number" min="1" step="0.01" value={pkg.price} onChange={(e) => { const p = [...editingPackages]; p[i].price = parseFloat(e.target.value) || 0; setEditingPackages(p); }} className="glass-input w-20 rounded-lg px-3 py-1.5 text-sm text-white text-center" placeholder="Preco" />
+                            <button onClick={() => { const p = [...editingPackages]; p[i].popular = !p[i].popular; setEditingPackages(p); }} className={`px-2 py-1 rounded-lg text-[10px] font-medium transition-colors ${pkg.popular ? 'bg-amber-500/20 text-amber-400' : 'bg-white/5 text-white/30'}`}>POPULAR</button>
+                            {editingPackages.length > 1 && (
+                              <button onClick={() => setEditingPackages(editingPackages.filter((_, j) => j !== i))} className="text-red-400/50 hover:text-red-400 transition-colors p-1"><Trash2 className="w-3.5 h-3.5" /></button>
+                            )}
+                          </div>
+                        ))}
+                        <button onClick={() => setEditingPackages([...editingPackages, { credits: 1, price: 1, popular: false }])} className="h-9 px-4 rounded-lg bg-white/5 text-white/40 text-xs font-medium tracking-wider hover:bg-white/10 hover:text-white/60 transition-colors flex items-center gap-1.5">
+                          <Plus className="w-3.5 h-3.5" /> ADICIONAR PACOTE
+                        </button>
+                        <div className="flex gap-2 pt-2">
+                          <button onClick={() => setEditingPackages(null)} className="flex-1 h-10 rounded-xl bg-white/5 text-white/60 text-xs font-medium tracking-wider hover:bg-white/10 transition-colors">Cancelar</button>
+                          <button onClick={handleSaveConfig} className="flex-1 h-10 rounded-xl bg-white text-black text-xs font-medium tracking-wider hover:bg-white/90 transition-colors flex items-center justify-center gap-1.5"><Save className="w-3.5 h-3.5" /> SALVAR TUDO</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {siteConfig.packages.map((pkg, i) => (
+                          <div key={i} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Coins className="w-4 h-4 text-amber-400/60" />
+                                <span className="text-lg font-bold text-white">{pkg.credits}</span>
+                                <span className="text-[11px] text-white/30">creditos</span>
+                              </div>
+                              {pkg.popular && <Badge className="bg-amber-500/10 text-amber-400 border-amber-500/20 text-[9px]">POPULAR</Badge>}
+                            </div>
+                            <p className="text-lg font-bold text-white mt-2">R$ {pkg.price.toFixed(2)}</p>
                           </div>
                         ))}
                       </div>

@@ -25,6 +25,7 @@ export async function ensureTables() {
     await client.execute(`CREATE TABLE IF NOT EXISTS "Link" ("id" TEXT NOT NULL PRIMARY KEY, "title" TEXT NOT NULL, "url" TEXT NOT NULL, "description" TEXT, "sortOrder" INTEGER NOT NULL DEFAULT 0, "isActive" BOOLEAN NOT NULL DEFAULT 1, "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)`)
     await client.execute(`CREATE TABLE IF NOT EXISTS "Notification" ("id" TEXT NOT NULL PRIMARY KEY, "userId" TEXT, "title" TEXT NOT NULL, "message" TEXT NOT NULL, "type" TEXT NOT NULL DEFAULT 'announcement', "isRead" BOOLEAN NOT NULL DEFAULT 0, "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)`)
     await client.execute(`CREATE TABLE IF NOT EXISTS "PaymentOrder" ("id" TEXT NOT NULL PRIMARY KEY, "userId" TEXT NOT NULL, "credits" INTEGER NOT NULL, "amount" REAL NOT NULL, "buyerName" TEXT NOT NULL, "buyerEmail" TEXT NOT NULL, "buyerCpf" TEXT NOT NULL, "status" TEXT NOT NULL DEFAULT 'pending', "pixKey" TEXT, "adminNotes" TEXT, "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)`)
+    await client.execute(`CREATE TABLE IF NOT EXISTS "SiteConfig" ("key" TEXT NOT NULL PRIMARY KEY, "value" TEXT NOT NULL, "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)`)
 
     // Migrations: add missing columns to existing tables
     try {
