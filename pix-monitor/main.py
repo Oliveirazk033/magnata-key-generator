@@ -529,7 +529,7 @@ class IMAPMonitor:
                 timeout=30,
             )
             self.client.login(GMAIL_EMAIL, GMAIL_APP_PASSWORD)
-            self.client.select("INBOX")
+            self.client.select_folder("INBOX")
             self._retry_count = 0
             logger.info("[bold green]✓ Conectado ao Gmail IMAP com sucesso[/bold green]")
             return True
@@ -576,7 +576,7 @@ class IMAPMonitor:
 
         try:
             # Busca e-mails não lidos do Nubank
-            self.client.select("INBOX")
+            self.client.select_folder("INBOX")
             messages = self.client.search(
                 ["UNSEEN", "FROM", "nubank", "SUBJECT", "PIX"]
             )
