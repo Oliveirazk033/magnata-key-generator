@@ -654,6 +654,12 @@ class IMAPMonitor:
                     )
 
                     # Chama callback
+                    # Marca e-mail como lido no Gmail
+                    try:
+                        self.client.add_flags([msg_id], ['\Seen'])
+                    except Exception:
+                        pass
+
                     on_pix_received(pix_data, subject, message_id_str)
                     pix_count += 1
 
