@@ -1381,6 +1381,11 @@ export default function Home() {
                   {buyStep === 'packages' && (
                     <div className="space-y-3">
                       <p className="text-sm text-white/40 mb-4">Escolha um pacote de creditos para comprar via PIX:</p>
+                      <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-3 mb-4">
+                        <p className="text-[11px] text-amber-400/90 text-center font-medium">
+                          IMPORTANTE: O nome cadastrado no PIX deve ser o mesmo preenchido abaixo. A aprovacao e automatica — se os nomes nao coincidirem, o pagamento precisara ser aprovado manualmente pelo admin.
+                        </p>
+                      </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                         {siteConfig.packages.map((pkg, i) => (
                           <motion.div
@@ -1430,7 +1435,8 @@ export default function Home() {
                         </div>
                         <div>
                           <label className="text-[11px] text-white/40 font-medium tracking-wider mb-1.5 block">NOME COMPLETO</label>
-                          <input placeholder="Seu nome completo" value={buyForm.name} onChange={(e) => setBuyForm({ ...buyForm, name: e.target.value })} className="glass-input w-full rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-white/20" />
+                          <input placeholder="Seu nome completo (igual ao titular do PIX)" value={buyForm.name} onChange={(e) => setBuyForm({ ...buyForm, name: e.target.value })} className="glass-input w-full rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-white/20" />
+                          <p className="text-[10px] text-amber-400/60 mt-1">Deve ser o mesmo nome do titular da conta que vai fazer o PIX</p>
                         </div>
                         <div>
                           <label className="text-[11px] text-white/40 font-medium tracking-wider mb-1.5 block">EMAIL</label>
