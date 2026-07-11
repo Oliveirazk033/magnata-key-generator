@@ -3,6 +3,52 @@ import { getClient, ensureTables } from '@/lib/db';
 import { randomUUID } from 'crypto';
 
 /**
+ * Normaliza um nome para comparação: remove acentos, lowercase, trim, espaços extras
+ */
+function normalizeName(name: string): string {
+  return name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // remove acentos
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, ' ');
+}
+
+/**
+ * Compara dois nomes de forma flexível.
+ * Retorna true se os nomes forem considerados iguais.
+ * - Nome completo normalizado igual
+ * - Primeiro nome igual E sobrenome igual (independente da ordem dos nomes do meio)
+ * - Pelo menos as 2 primeiras palavras iguais (nome + primeiro sobrenome)
+ */
+function namesMatch(pixSender: string, buyerName: string): boolean {
+  const a = normalizeName(pixSender);
+  const b = normalizeName(buyerName);
+
+  if (!a || !b) return false;
+
+  // 1) Nome completo igual
+  if (a === b) return true;
+
+  const wordsA = a.split(' ').filter(Boolean);
+  const wordsB = b.split(' ').filter(Boolean);
+
+  // 2) Pelo menos as 2 primeiras palavras batem (nome + sobrenome)
+  if (wordsA.length >= 2 && wordsB.length >= 2) {
+    if (wordsA[0] === wordsB[0] && wordsA[1] === wordsB[1]) return true;
+  }
+
+  // 3) Primeiro nome igual e os sobrenomes se intercruzam
+  if (wordsA[0] === wordsB[0]) {
+    const lastA = wordsA[wordsA.length - 1];
+    const lastB = wordsB[wordsB.length - 1];
+    if (lastA === lastB) return true;
+  }
+
+  return false;
+}
+
+/**
  * POST /api/pix-webhook
  * Recebe dados de um PIX detectado pelo monitor Python e auto-aprova
  * o pedido correspondente, creditando o usuário.
@@ -35,26 +81,43 @@ export async function POST(request: NextRequest) {
       args: [],
     });
 
-    // Procura pedido com valor igual (comparação em centavos)
+    // Procura pedido com valor E nome do remetente correspondentes
     let matchedOrder: any = null;
+    const skippedOrders: any[] = [];
+
     for (const row of orders.rows) {
       const orderAmountCents = Math.round(Number(row.amount) * 100);
-      if (orderAmountCents === amountCents) {
-        matchedOrder = row as any;
-        break;
+      if (orderAmountCents !== amountCents) continue;
+
+      // Verifica se o nome do remetente do PIX bate com o nome do comprador
+      if (sender && row.buyerName) {
+        if (!namesMatch(sender, row.buyerName)) {
+          skippedOrders.push({
+            id: row.id,
+            amount: Number(row.amount).toFixed(2),
+            credits: row.credits,
+            buyerName: row.buyerName,
+            reason: 'nome nao confere',
+          });
+          continue;
+        }
       }
+
+      matchedOrder = row as any;
+      break;
     }
 
     if (!matchedOrder) {
       return NextResponse.json({
         success: false,
-        message: `Nenhum pedido pendente encontrado para R$ ${Number(amount).toFixed(2)}`,
+        message: `Nenhum pedido pendente encontrado para R$ ${Number(amount).toFixed(2)} com nome "${sender || 'N/A'}"`,
         pendingOrders: orders.rows.map((r: any) => ({
           id: r.id,
           amount: Number(r.amount).toFixed(2),
           credits: r.credits,
           buyerName: r.buyerName,
         })),
+        skippedOrders,
       }, { status: 404 });
     }
 
