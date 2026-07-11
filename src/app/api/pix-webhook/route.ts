@@ -79,43 +79,45 @@ export async function POST(request: NextRequest) {
     });
     const user = userResult.rows[0] as any;
 
-    // Notifica o usuário (ignora erro se userId não existir)
+    // Notifica o usuário (ignora erro silenciosamente)
     try {
       await client.execute({
         sql: `INSERT INTO "Notification" (id, userId, title, message, type, isRead, createdAt) VALUES (?, ?, ?, ?, 'credit', 0, CURRENT_TIMESTAMP)`,
         args: [
           randomUUID(),
+          order.userId,
           'Pagamento aprovado automaticamente!',
           `Seu pagamento de R$${Number(order.amount).toFixed(2)} (${order.credits} creditos) foi detectado e aprovado automaticamente! Novo saldo: ${user?.credits || 0} creditos.`,
-          order.userId,
         ],
       });
-    } catch (_) { /* userId pode não existir mais */ }
+    } catch (_) { /* ignorar erro de notificação */ }
 
-    // Registra transação (ignora erro se userId não existir)
+    // Registra transação — usa keyId vazio pois é compra de créditos, não de chave
+    // A tabela Transaction pode ter FK constraint do Prisma, então envolvemos em try/catch
     try {
       await client.execute({
-        sql: `INSERT INTO "Transaction" (id, keyId, productName, credits, buyerInfo, createdAt, userId) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)`,
+        sql: `INSERT INTO "Transaction" (id, keyId, productName, credits, buyerInfo, createdAt, userId) VALUES (?, '', ?, ?, ?, CURRENT_TIMESTAMP, ?)`,
         args: [
           randomUUID(),
-          `pix-auto-${order.id}`,
           `Compra de Creditos (Auto) - R$${Number(order.amount).toFixed(2)}`,
           order.credits,
           `Nome: ${order.buyerName} | Email: ${order.buyerEmail} | CPF: ${order.buyerCpf} | PIX de: ${sender || 'N/A'}`,
           order.userId,
         ],
       });
-    } catch (_) { /* FK pode falhar se user não existe */ }
+    } catch (_) { /* FK pode falhar — não é critico */ }
 
     // Notifica admin sobre aprovação automática
-    await client.execute({
-      sql: `INSERT INTO "Notification" (id, userId, title, message, type, isRead, createdAt) VALUES (?, NULL, ?, ?, 'announcement', 0, CURRENT_TIMESTAMP)`,
-      args: [
-        randomUUID(),
-        'Pedido auto-aprovado via PIX',
-        `${order.credits} creditos - R$${Number(order.amount).toFixed(2)} | ${order.buyerName} | PIX de: ${sender || 'N/A'}`,
-      ],
-    });
+    try {
+      await client.execute({
+        sql: `INSERT INTO "Notification" (id, userId, title, message, type, isRead, createdAt) VALUES (?, NULL, ?, ?, 'announcement', 0, CURRENT_TIMESTAMP)`,
+        args: [
+          randomUUID(),
+          'Pedido auto-aprovado via PIX',
+          `${order.credits} creditos - R$${Number(order.amount).toFixed(2)} | ${order.buyerName} | PIX de: ${sender || 'N/A'}`,
+        ],
+      });
+    } catch (_) { /* ignorar erro de notificação admin */ }
 
     return NextResponse.json({
       success: true,

@@ -38,5 +38,20 @@ export async function ensureTables() {
       // Migration failed, try again next call
       console.error('Migration error:', e)
     }
+
+    // Migration: recriar Transaction sem FK constraint do Prisma
+    // O Prisma cria FOREIGN KEY (keyId) REFERENCES Key(id) que impede
+    // inserir transações de crédito (sem chave real)
+    try {
+      const fkInfo = await client.execute(`PRAGMA foreign_key_list("Transaction")`)
+      if (fkInfo.rows.length > 0) {
+        await client.execute(`CREATE TABLE IF NOT EXISTS "Transaction_new" ("id" TEXT NOT NULL PRIMARY KEY, "keyId" TEXT NOT NULL DEFAULT '', "productName" TEXT NOT NULL, "credits" INTEGER NOT NULL, "buyerInfo" TEXT NOT NULL, "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, "userId" TEXT)`)
+        await client.execute(`INSERT OR IGNORE INTO "Transaction_new" SELECT * FROM "Transaction"`)
+        await client.execute(`DROP TABLE "Transaction"`)
+        await client.execute(`ALTER TABLE "Transaction_new" RENAME TO "Transaction"`)
+      }
+    } catch (e) {
+      console.error('Transaction migration error:', e)
+    }
   } catch { /* ok */ }
 }
