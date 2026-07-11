@@ -1,0 +1,5 @@
+imapclient>=3.0.1
+mail-parser>=3.70.0
+python-dotenv>=1.0.1
+httpx>=0.28.1
+rich>=13.9.4
