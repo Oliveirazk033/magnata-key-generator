@@ -611,8 +611,14 @@ class IMAPMonitor:
                     # Extrai remetente
                     from_addr = ""
                     if envelope.from_:
-                        from_name, from_email = envelope.from_[0]
-                        from_addr = from_email.decode() if from_email else ""
+                        addr = envelope.from_[0]
+                        # imapclient 3.x: Address object com .mailbox e .host
+                        if hasattr(addr, 'mailbox') and hasattr(addr, 'host'):
+                            from_addr = f"{addr.mailbox}@{addr.host}" if addr.mailbox else ""
+                        else:
+                            # imapclient 2.x: tuple (name, email_bytes)
+                            from_name, from_email = addr
+                            from_addr = from_email.decode() if from_email else ""
 
                     # Verifica duplicata
                     if db.is_processed(message_id_str):
