@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
         'Pedido auto-aprovado via PIX',
         `${order.credits} creditos - R$${Number(order.amount).toFixed(2)} | ${order.buyerName} | PIX de: ${sender || 'N/A'}`,
       ],
-    ]);
+    });
 
     return NextResponse.json({
       success: true,
