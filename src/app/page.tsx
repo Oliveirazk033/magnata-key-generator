@@ -303,8 +303,6 @@ export default function Home() {
   };
 
   const [newAnnouncement, setNewAnnouncement] = useState({ title: '', message: '', userId: '' });
-  const [pixChecking, setPixChecking] = useState(false);
-  const [pixResults, setPixResults] = useState<{ amount: number; description: string; senderName: string; credited: boolean; username: string | null; creditsAdded: number | null; message: string }[]>([]);
 
   // Buy credits
   const [siteConfig, setSiteConfig] = useState<{ pixKey: string; pixHolder: string; packages: typeof defaultPackages }>({ pixKey: 'adrianviniciusdeoliveiraa@gmail.com', pixHolder: 'ADRIAN VINICIUS DE OLIVEIRA', packages: defaultPackages });
@@ -416,21 +414,6 @@ export default function Home() {
     } catch { toast.error('Erro ao processar pedido'); }
   };
 
-  const handleCheckPix = async () => {
-    setPixChecking(true);
-    try {
-      const res = await fetch('/api/payments/check-pix', { method: 'POST', headers: { 'Content-Type': 'application/json', ...getAdminHeaders() } });
-      const data = await res.json();
-      if (data.error) { toast.error(data.error); }
-      else {
-        setPixResults(data.results || []);
-        const credited = (data.results || []).filter((r: any) => r.credited).length;
-        if (data.total === 0) toast.info('Nenhum pagamento novo encontrado');
-        else toast.success(`${credited} de ${data.total} pagamento(s) processado(s)`);
-      }
-    } catch { toast.error('Erro ao verificar pagamentos'); }
-    setPixChecking(false);
-  };
   const handleSendAnnouncement = async () => {
     if (!newAnnouncement.title || !newAnnouncement.message) { toast.error('Preencha titulo e mensagem'); return; }
     try {
@@ -855,7 +838,7 @@ export default function Home() {
         { group: 'Central', items: [{ icon: LayoutDashboard, label: 'Dashboard', tab: 'dashboard' }] },
         { group: 'Gerador', items: [{ icon: Key, label: 'Gerar Keys', tab: 'products' }, { icon: Package, label: 'Estoque', tab: 'stock' }, { icon: History, label: 'Historico Keys', tab: 'sales' }] },
         { group: 'Instalacao', items: [{ icon: Play, label: 'Tutoriais', tab: 'tutorials' }, { icon: Link2, label: 'Links', tab: 'links' }] },
-        { group: 'Sistema', items: [{ icon: User, label: 'Usuarios', tab: 'users' }, { icon: Bell, label: 'Notificacoes', tab: 'notifications' }, { icon: CreditCard, label: 'Pagamentos', tab: 'payments' }, { icon: ShoppingCart, label: 'Pedidos', tab: 'orders' }, { icon: Settings, label: 'Configuracoes', tab: 'settings' }] },
+        { group: 'Sistema', items: [{ icon: User, label: 'Usuarios', tab: 'users' }, { icon: Bell, label: 'Notificacoes', tab: 'notifications' }, { icon: ShoppingCart, label: 'Pedidos', tab: 'orders' }, { icon: Settings, label: 'Configuracoes', tab: 'settings' }] },
       ]
     : [];
 
@@ -1936,52 +1919,6 @@ export default function Home() {
                           <button onClick={() => handleDeleteNotification(n.id)} className="text-white/20 hover:text-red-400 transition-colors p-1 shrink-0"><Trash2 className="w-3.5 h-3.5" /></button>
                         </div>
                       ))}
-                    </div>
-                  </div>
-                </TabsContent>
-
-                {/* Payments / PIX Tab */}
-                <TabsContent value="payments" className="space-y-3 mt-0">
-                  <div className="glass rounded-xl p-5">
-                    <h3 className="text-sm font-semibold tracking-wider text-white mb-2 flex items-center gap-2"><CreditCard className="w-4 h-4 text-white/40" />Verificar Pagamentos PIX</h3>
-                    <p className="text-[11px] text-white/30 mb-4">Verifica automaticamente novos pagamentos PIX recebidos via email do Nubank. O usuario deve colocar o username na descricao do PIX.</p>
-                    <button onClick={handleCheckPix} disabled={pixChecking} className="h-10 px-6 rounded-xl bg-white text-black text-xs font-medium tracking-wider hover:bg-white/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                      {pixChecking ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-                      {pixChecking ? 'VERIFICANDO...' : 'VERIFICAR PAGAMENTOS'}
-                    </button>
-                  </div>
-
-                  {pixResults.length > 0 && (
-                    <div className="glass rounded-xl p-5">
-                      <h3 className="text-sm font-semibold tracking-wider text-white mb-4">Resultados</h3>
-                      <div className="space-y-2">
-                        {pixResults.map((r, i) => (
-                          <div key={i} className={`p-3 rounded-lg border ${r.credited ? 'bg-green-500/5 border-green-500/20' : 'bg-white/[0.02] border-white/[0.05]'}`}>
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-sm font-semibold text-white">R$ {r.amount.toFixed(2)}</span>
-                              <Badge className={r.credited ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30'}>
-                                {r.credited ? 'Creditado' : 'Nao creditado'}
-                              </Badge>
-                            </div>
-                            <p className="text-[11px] text-white/40">Remetente: {r.senderName}</p>
-                            <p className="text-[11px] text-white/40">Descricao: {r.description || '(vazio)'}</p>
-                            {r.username && <p className="text-[11px] text-blue-400">Usuario: @{r.username} — +{r.creditsAdded} creditos</p>}
-                            <p className="text-[10px] text-white/25 mt-1">{r.message}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="glass rounded-xl p-5">
-                    <h3 className="text-sm font-semibold tracking-wider text-white mb-3">Como funciona</h3>
-                    <div className="space-y-2 text-[11px] text-white/40">
-                      <p>1. O usuario faz um PIX para sua chave</p>
-                      <p>2. Na descricao do PIX, o usuario coloca o <span className="text-white/70 font-medium">username</span> dele no site</p>
-                      <p>3. O Nubank envia um email de notificacao para seu Gmail</p>
-                      <p>4. Voce clica em <span className="text-white/70 font-medium">"Verificar Pagamentos"</span> acima</p>
-                      <p>5. O sistema lê os emails, encontra o username na descricao e credita automaticamente</p>
-                      <p className="text-white/60 mt-3">Cada R$1,00 = 1 credito adicionado ao usuario</p>
                     </div>
                   </div>
                 </TabsContent>
