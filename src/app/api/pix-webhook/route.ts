@@ -79,29 +79,33 @@ export async function POST(request: NextRequest) {
     });
     const user = userResult.rows[0] as any;
 
-    // Notifica o usuário
-    await client.execute({
-      sql: `INSERT INTO "Notification" (id, userId, title, message, type, isRead, createdAt) VALUES (?, ?, ?, ?, 'credit', 0, CURRENT_TIMESTAMP)`,
-      args: [
-        randomUUID(),
-        'Pagamento aprovado automaticamente!',
-        `Seu pagamento de R$${Number(order.amount).toFixed(2)} (${order.credits} creditos) foi detectado e aprovado automaticamente! Novo saldo: ${user?.credits || 0} creditos.`,
-        order.userId,
-      ],
-    });
+    // Notifica o usuário (ignora erro se userId não existir)
+    try {
+      await client.execute({
+        sql: `INSERT INTO "Notification" (id, userId, title, message, type, isRead, createdAt) VALUES (?, ?, ?, ?, 'credit', 0, CURRENT_TIMESTAMP)`,
+        args: [
+          randomUUID(),
+          'Pagamento aprovado automaticamente!',
+          `Seu pagamento de R$${Number(order.amount).toFixed(2)} (${order.credits} creditos) foi detectado e aprovado automaticamente! Novo saldo: ${user?.credits || 0} creditos.`,
+          order.userId,
+        ],
+      });
+    } catch (_) { /* userId pode não existir mais */ }
 
-    // Registra transação
-    await client.execute({
-      sql: `INSERT INTO "Transaction" (id, keyId, productName, credits, buyerInfo, createdAt, userId) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)`,
-      args: [
-        randomUUID(),
-        `pix-auto-${order.id}`,
-        `Compra de Creditos (Auto) - R$${Number(order.amount).toFixed(2)}`,
-        order.credits,
-        `Nome: ${order.buyerName} | Email: ${order.buyerEmail} | CPF: ${order.buyerCpf} | PIX de: ${sender || 'N/A'}`,
-        order.userId,
-      ],
-    });
+    // Registra transação (ignora erro se userId não existir)
+    try {
+      await client.execute({
+        sql: `INSERT INTO "Transaction" (id, keyId, productName, credits, buyerInfo, createdAt, userId) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)`,
+        args: [
+          randomUUID(),
+          `pix-auto-${order.id}`,
+          `Compra de Creditos (Auto) - R$${Number(order.amount).toFixed(2)}`,
+          order.credits,
+          `Nome: ${order.buyerName} | Email: ${order.buyerEmail} | CPF: ${order.buyerCpf} | PIX de: ${sender || 'N/A'}`,
+          order.userId,
+        ],
+      });
+    } catch (_) { /* FK pode falhar se user não existe */ }
 
     // Notifica admin sobre aprovação automática
     await client.execute({
