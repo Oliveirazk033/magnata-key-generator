@@ -575,10 +575,10 @@ class IMAPMonitor:
             return 0
 
         try:
-            # Busca e-mails não lidos do Nubank
+            # Busca e-mails do Nubank sobre PIX (busca todos, DB evita duplicatas)
             self.client.select_folder("INBOX")
             messages = self.client.search(
-                ["UNSEEN", "FROM", "nubank", "SUBJECT", "PIX"]
+                ["FROM", "nubank", "SUBJECT", "PIX"]
             )
 
             if not messages:
@@ -592,12 +592,12 @@ class IMAPMonitor:
 
             for msg_id in messages:
                 try:
-                    response = self.client.fetch([msg_id], ["RFC822", "ENVELOPE"])
+                    response = self.client.fetch([msg_id], ["BODY.PEEK[]", "ENVELOPE"])
                     if msg_id not in response:
                         continue
 
                     msg_data = response[msg_id]
-                    raw_email = msg_data[b"RFC822"]
+                    raw_email = msg_data[b"BODY[]"]
                     envelope = msg_data[b"ENVELOPE"]
 
                     # Extrai message ID
